@@ -954,7 +954,7 @@ class Quadrotor:
             rc = state_traj[t, 0:3]
             # altitude of quaternion
             q = state_traj[t, 6:10]
-
+            q = q / np.linalg.norm(q)
 
             # direction cosine matrix from body to inertial
             CIB = np.transpose(self.dir_cosine(q).full())
@@ -1651,6 +1651,7 @@ class Rocket:
             rc = state_traj[t, 0:3]
             # altitude of quaternion
             q = state_traj[t, 6:10]
+            q = q / np.linalg.norm(q)
             # thrust force
             f = control_traj[t, 0:3]
 

@@ -66,8 +66,8 @@ def getloss_corrections(time_grid, target_waypoints, opt_sol, auxsys_sol):
 T = 3
 true_parameter = [2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
 true_time_grid, true_opt_sol = oc.cocSolver(ini_state, T, true_parameter)
-# env.play_animation(rocket_len=2, state_traj=true_opt_sol(np.linspace(0, T, 100))[:, 0:oc.n_state],
-#                    control_traj=true_opt_sol(np.linspace(0, T, 100))[:, oc.n_state:oc.n_state + oc.n_control])
+env.play_animation(rocket_len=2, state_traj=true_opt_sol(np.linspace(0, T, 100))[:, 0:oc.n_state],
+                   control_traj=true_opt_sol(np.linspace(0, T, 100))[:, oc.n_state:oc.n_state + oc.n_control])
 
 taus = true_time_grid[[1, 3, 6, 10, 13]]
 waypoints = np.zeros((taus.size, interface_pos_fn.numel_out() + interface_ori_fn.numel_out()))
