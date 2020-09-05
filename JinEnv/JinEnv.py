@@ -652,110 +652,6 @@ class CartPole:
             position[t, :] = np.array([cart_pos_x, cart_pos_y, pole_pos_x, pole_pos_y])
         return position
 
-
-# Vehicle environment
-class AutoCar:
-    def __init__(self, project_name='autonomous vehicle'):
-        self.project_name = project_name
-
-    def initDyn(self, lf=None, lr=None):
-        # set the global parameters
-        g = 10
-
-        # declare system parameters
-        parameter = []
-        if lf is None:
-            self.lf = SX.sym('lf')
-            parameter += [self.lf]
-        else:
-            self.lf = lf
-
-        if lr is None:
-            self.lr = SX.sym('lr')
-            parameter += [self.lr]
-        else:
-            self.lr = lr
-
-        # Declare system variables
-        self.x, self.y, self.theta, self.v = SX.sym('x'), SX.sym('y'), SX.sym('theta'), SX.sym('v')
-        self.X = vertcat(self.x, self.y, self.theta, self.v)
-
-        self.a = SX.sym('a')
-        self.delta = SX.sym('delta')
-        self.U = vertcat(self.a, self.delta)
-
-        dx = self.v * cos(self.theta)
-        dy = self.v * sin(self.theta)
-        dtheta = self.v / (self.lr + self.lf) * tan(self.delta)
-        dv = self.a
-
-        self.f = vertcat(dx, dy, dtheta, dv)
-        self.pos = vertcat(self.x, self.y)
-        self.vel = vertcat(dx, dy)
-
-    def initCost(self, w_control):
-        parameter = []
-
-        # goal aspect
-        goal_pos = np.array([8, -3])
-        self.cost_goal_pos = dot(self.pos - goal_pos, self.pos - goal_pos)
-
-        # velocity aspect
-        goal_v = np.array([0, 0])
-        self.cost_goal_v = dot(self.vel - goal_v, self.vel - goal_v)
-
-        # features for x
-        self.w_xsq = SX.sym('w_xsq')
-        self.feature_xsq = 0.5 * self.pos[0] * self.pos[0]
-        parameter += [self.w_xsq]
-        self.w_x = SX.sym('w_x')
-        self.feature_x = self.pos[0]
-        parameter += [self.w_x]
-
-        # features for y
-        self.w_ysq = SX.sym('w_ysq')
-        self.feature_ysq = 0.5 * self.pos[1] * self.pos[1]
-        parameter += [self.w_ysq]
-        self.w_y = SX.sym('w_y')
-        self.feature_y = self.pos[1]
-        parameter += [self.w_y]
-        self.w_ycub = SX.sym('w_ycub')
-        self.feature_ycub = 0.5 * self.pos[1] * self.pos[1] * self.pos[1]
-        parameter += [self.w_ycub]
-
-        self.path_cost = self.w_xsq * self.feature_xsq + self.w_x * self.feature_x + \
-                         self.w_ysq * self.feature_ysq + self.w_y * self.feature_y + \
-                         w_control * dot(self.U, self.U)
-
-        self.final_cost = 100 * self.cost_goal_pos
-
-        self.cost_auxvar = vcat(parameter)
-
-    def play_animation(self, car_len, state_traj, dt=0.1, save_option=0, title='car_reaching'):
-        # set figure
-        fig = plt.figure(figsize=(10, 8))
-        ax = fig.add_subplot(111)
-        ax.set_aspect('equal')
-        ax.set_ylim(-10, 10)
-        ax.set_xlim(-20, 20)
-        ax.set_ylabel('Vertical (m)')
-        ax.set_xlabel('Horizontal (m)')
-        ax.set_title(title)
-        time_template = 'time = %.1fs'
-        time_text = ax.text(0.05, 0.9, '', transform=ax.transAxes)
-
-        sim_horizon = state_traj.shape[0]
-
-        line_traj, = ax.plot(state_traj[:1, 0], state_traj[:1, 1])
-
-        def update_traj(num):
-            line_traj.set_data(state_traj[:num, 0], state_traj[:num, 1])
-            return line_traj,
-
-        ani = animation.FuncAnimation(fig, update_traj, sim_horizon, interval=100, blit=True)
-        plt.show()
-
-
 # quadrotor (UAV) environment
 class Quadrotor:
     def __init__(self, project_name='my UAV'):
@@ -1059,6 +955,7 @@ class Quadrotor:
             # altitude of quaternion
             q = state_traj[t, 6:10]
 
+
             # direction cosine matrix from body to inertial
             CIB = np.transpose(self.dir_cosine(q).full())
 
@@ -1081,32 +978,24 @@ class Quadrotor:
                        horizon=1, waypoints=None):
 
         # plot
-        params = {'axes.labelsize': 25,
-                  'axes.titlesize': 25,
-                  'xtick.labelsize': 20,
-                  'ytick.labelsize': 20,
-                  'legend.fontsize': 16}
-        plt.rcParams.update(params)
-        #
-        # fig = plt.figure(figsize=(13, 8))
-        # ax = fig.add_subplot(111, projection='3d')
-        # ax.set_xlabel('X (m)', fontsize=20, labelpad=18)
-        # ax.set_ylabel('Y (m)', fontsize=20, labelpad=20)
-        # ax.set_zlabel('Z (m)', fontsize=20, labelpad=12)
-        # ax.set_zlim(0, 8)
-        # ax.set_ylim(-9, 9)
-        # ax.set_xlim(-9, 9)
-        # ax.set_xticks(np.arange(-8, 9, 4))
-        # ax.set_yticks(np.arange(-8, 9, 8))
-        # ax.set_zticks(np.arange(0, 10, 2))
-        # # ax.tick_params(labelbottom=False, labelright=False, labelleft=False)
-        # # ax.set_zticks(np.arange(0, 10, 2))
-        # ax.set_title('Learning from two waypoints', pad=30, fontsize=30)
-        # ax.view_init(elev=40, azim=-71)
-        # ax.set_position([-0.03, 0.05, 0.7, 0.90])
-        # # ax.view_init(elev=88, azim=-90)
-        # time_template = 'time = %.1fs'
-        # time_text = ax.text2D(0.55, 0.20, "time", transform=ax.transAxes, fontsize=15)
+        # params = {'axes.labelsize': 25,
+        #           'axes.titlesize': 25,
+        #           'xtick.labelsize': 20,
+        #           'ytick.labelsize': 20,
+        #           'legend.fontsize': 16}
+        # plt.rcParams.update(params)
+
+        fig = plt.figure()
+        ax = fig.add_subplot(111, projection='3d')
+        ax.set_xlabel('X (m)', fontsize=15, labelpad=15)
+        ax.set_ylabel('Y (m)', fontsize=15, labelpad=15)
+        ax.set_zlabel('Z (m)', fontsize=15, labelpad=15)
+        ax.set_zlim(0, 12)
+        ax.set_ylim(-9, 9)
+        ax.set_xlim(-9, 9)
+        ax.set_title('UAV manuvering', pad=15, fontsize=20)
+        time_template = 'time = %.1fs'
+        time_text = ax.text2D(0.55, 0.50, "time", transform=ax.transAxes, fontsize=15)
 
         # fig = plt.figure(figsize=(7,6))
         # ax = fig.add_subplot(1, 1, 1, projection='3d', )
@@ -1127,25 +1016,25 @@ class Quadrotor:
         # time_text = ax.text2D(0.55, 0.20, "time", transform=ax.transAxes, fontsize=0)
 
 
-        fig = plt.figure(figsize=(7,6))
-        ax = fig.add_subplot(1, 1, 1, projection='3d', )
-        ax.set_xlabel('X', fontsize=40, labelpad=10)
-        ax.set_zlabel('Z', fontsize=40, labelpad=10)
-        ax.set_xticks([])
-        ax.set_yticks([])
-        ax.set_zticks([])
-        ax.set_ylim(-9, 9)
-        ax.set_xlim(-9, 9)
-        ax.set_zlim(0, 8)
-        ax.set_zticks(np.arange(0, 8, 2))
-        ax.set_xticks(np.arange(-8, 9, 4))
-        # ax.set_yticks(np.arange(-8, 9, 8))
-        ax.tick_params(labelbottom=False, labelright=False, labelleft=False)
-        # ax.view_init(elev=0, azim=-90)
-        ax.set_title('Front view', fontsize=40, pad=-25)
-        ax.set_position([-0.17, -0.12, 1.30, 1.15])
-        time_template = 'time = %.1fs'
-        time_text = ax.text2D(0.55, 0.20, "time", transform=ax.transAxes, fontsize=0)
+        # fig = plt.figure(figsize=(7,6))
+        # ax = fig.add_subplot(1, 1, 1, projection='3d', )
+        # ax.set_xlabel('X', fontsize=40, labelpad=10)
+        # ax.set_zlabel('Z', fontsize=40, labelpad=10)
+        # ax.set_xticks([])
+        # ax.set_yticks([])
+        # ax.set_zticks([])
+        # ax.set_ylim(-9, 9)
+        # ax.set_xlim(-9, 9)
+        # ax.set_zlim(0, 8)
+        # ax.set_zticks(np.arange(0, 8, 2))
+        # ax.set_xticks(np.arange(-8, 9, 4))
+        # # ax.set_yticks(np.arange(-8, 9, 8))
+        # ax.tick_params(labelbottom=False, labelright=False, labelleft=False)
+        # # ax.view_init(elev=0, azim=-90)
+        # ax.set_title('Front view', fontsize=40, pad=-25)
+        # ax.set_position([-0.17, -0.12, 1.30, 1.15])
+        # time_template = 'time = %.1fs'
+        # time_text = ax.text2D(0.55, 0.20, "time", transform=ax.transAxes, fontsize=0)
 
         # draw the obstacles
         # bar2_back = ax.bar3d([-1], [-3], [0], dx=[0.5], dy=[0.5], dz=[4.5], color='#D95319')
@@ -1178,13 +1067,13 @@ class Quadrotor:
         r2_x, r2_y, r2_z = position[0, 6:9]
         r3_x, r3_y, r3_z = position[0, 9:12]
         r4_x, r4_y, r4_z = position[0, 12:15]
-        line_arm1, = ax.plot([c_x, r1_x], [c_y, r1_y], [c_z, r1_z], linewidth=4, color='blue', marker='o', markersize=7,
+        line_arm1, = ax.plot([c_x, r1_x], [c_y, r1_y], [c_z, r1_z], linewidth=4, color='blue', marker='o', markersize=4,
                              markerfacecolor='black')
-        line_arm2, = ax.plot([c_x, r2_x], [c_y, r2_y], [c_z, r2_z], linewidth=4, color='red', marker='o', markersize=7,
+        line_arm2, = ax.plot([c_x, r2_x], [c_y, r2_y], [c_z, r2_z], linewidth=4, color='red', marker='o', markersize=4,
                              markerfacecolor='black')
-        line_arm3, = ax.plot([c_x, r3_x], [c_y, r3_y], [c_z, r3_z], linewidth=4, color='blue', marker='o', markersize=7,
+        line_arm3, = ax.plot([c_x, r3_x], [c_y, r3_y], [c_z, r3_z], linewidth=4, color='blue', marker='o', markersize=4,
                              markerfacecolor='black', )
-        line_arm4, = ax.plot([c_x, r4_x], [c_y, r4_y], [c_z, r4_z], linewidth=4, color='red', marker='o', markersize=7,
+        line_arm4, = ax.plot([c_x, r4_x], [c_y, r4_y], [c_z, r4_z], linewidth=4, color='red', marker='o', markersize=4,
                              markerfacecolor='black', )
 
         line_traj_ref, = ax.plot(position_ref[:1, 0], position_ref[:1, 1], position_ref[:1, 2], color='gray', alpha=0.5)

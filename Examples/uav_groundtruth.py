@@ -21,7 +21,7 @@ path_cost = beta * env.path_cost
 oc.setPathCost(path_cost)
 oc.setFinalCost(env.final_cost)
 oc.setIntegrator(n_grid=15)
-print(oc.state)
+
 # set initial condition
 ini_r_I=[-8, -0, 10.]
 ini_v_I = [-3.0, -9.0, 0.0]
@@ -64,6 +64,7 @@ def getloss_corrections(time_grid, target_waypoints, opt_sol, auxsys_sol):
 T = 2
 true_parameter = [2, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5,0.5, 0.5, 0.5,0.5]
 true_time_grid, true_opt_sol = oc.cocSolver(ini_state, T, true_parameter)
+env.play_animation(wing_len=1,state_traj=true_opt_sol(true_time_grid)[:,:oc.n_state])
 taus = true_time_grid[[1, 3, 6, 10, 13]]
 waypoints = np.zeros((taus.size, interface_pos_fn.numel_out()+interface_ori_fn.numel_out()))
 for k, t in enumerate(taus):
