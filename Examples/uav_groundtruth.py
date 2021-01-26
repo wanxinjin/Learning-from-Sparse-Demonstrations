@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import os
 import sys
+import time
 sys.path.append(os.getcwd()+'/CPDP')
 sys.path.append(os.getcwd()+'/JinEnv')
 import CPDP
@@ -103,4 +104,4 @@ save_data = {'parameter_trace': parameter_trace,
              'time_grid':taus,
              'T':T}
 
-# sio.savemat('../data/uav_results.mat', {'results': save_data})
+sio.savemat(os.getcwd() + '/data/uav_results_groundtruth_' + time.strftime("%Y%m%d%H%M%S") + '.mat', {'results': save_data})
