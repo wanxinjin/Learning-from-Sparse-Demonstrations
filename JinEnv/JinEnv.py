@@ -673,7 +673,7 @@ class Quadrotor:
 
     def initDyn(self, Jx=None, Jy=None, Jz=None, mass=None, l=None, c=None):
         # global parameter
-        g = 10
+        g = 10 # I need to change this for real demo!!!!!
 
         # parameters settings
         parameter = []
