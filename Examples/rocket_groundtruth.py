@@ -1,8 +1,14 @@
-from CPDP import CPDP
-from JinEnv import JinEnv
+#!/usr/bin/env python3
+import os
+import sys
+import time
+sys.path.append(os.getcwd()+'/CPDP')
+sys.path.append(os.getcwd()+'/JinEnv')
+import CPDP
+import JinEnv
 from casadi import *
 from scipy.integrate import solve_ivp
-import time
+
 
 # ---------------------------------------load environment---------------------------------------
 env = JinEnv.Rocket()

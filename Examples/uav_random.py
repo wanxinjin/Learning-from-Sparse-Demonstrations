@@ -9,7 +9,6 @@ import JinEnv
 from casadi import *
 
 
-
 # ---------------------------------------load environment---------------------------------------
 env = JinEnv.Quadrotor()
 env.initDyn(Jx=.5, Jy=.5, Jz=1, mass=1, l=1, c=0.02)
