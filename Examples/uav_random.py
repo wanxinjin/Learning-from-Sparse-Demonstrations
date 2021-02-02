@@ -7,6 +7,7 @@ sys.path.append(os.getcwd()+'/JinEnv')
 import CPDP
 import JinEnv
 from casadi import *
+import scipy.io as sio
 
 
 # ---------------------------------------load environment---------------------------------------
@@ -25,7 +26,7 @@ oc.setDyn(dyn)
 path_cost = beta * env.path_cost
 oc.setPathCost(path_cost)
 oc.setFinalCost(env.final_cost)
-oc.setIntegrator(n_grid=20)
+oc.setIntegrator(n_grid=10)
 
 # --------------------------- set initial condition and horizon ------------------------------
 # set initial condition
@@ -101,7 +102,8 @@ waypoints = np.array([
                     [-1.0, 1., 4], ])
 
 # --------------------------- start the learning process --------------------------------
-lr = 5e-3
+# lr = 5e-3
+lr = 1e-3
 loss_trace, parameter_trace = [], []
 current_parameter = np.array([1, .1, .1, .1, .1, .1, -1])
 parameter_trace += [current_parameter.tolist()]
@@ -116,12 +118,26 @@ for j in range(int(1000)):
     parameter_trace += [current_parameter.tolist()]
     print('iter:', j, 'loss:', loss_trace[-1].tolist())
 
+
+# Below is to obtain the final uav trajectory based on the learned objective function (under un-warping settings)
+horizon = current_parameter[0]*T # note this is the uav actual horizon after warping (T is before warping)
+current_parameter[0] = 1  # the learned cost function, but set the time-warping function as unit (un-warping)
+_, opt_sol = oc.cocSolver(ini_state, horizon, current_parameter)
+time_steps = np.linspace(0, horizon, num=100) # generate the time inquiry grid with N is the point number
+opt_traj = opt_sol(time_steps)
+opt_state_traj = opt_traj[:, :oc.n_state]  # state trajectory ----- N*[r,v,q,w]
+opt_control_traj = opt_traj[:, oc.n_state:oc.n_state+oc.n_control] #control trajectory ---- N*[t1,t2,t3,t4]
+
 # save the results
 save_data = {'parameter_trace': parameter_trace,
              'loss_trace': loss_trace,
              'learning_rate': lr,
              'waypoints': waypoints,
              'time_grid': taus,
+             'time_steps':time_steps,
+             'opt_state_traj': opt_state_traj,
+             'opt_control_traj':opt_control_traj,
+             'horizon':horizon,
              'T': T}
 
-# sio.savemat('data/uav_results11.mat', {'results': save_data})
+sio.savemat(os.getcwd() + '/data/uav_results_random_' + time.strftime("%Y%m%d%H%M%S") + '.mat', {'results': save_data})
