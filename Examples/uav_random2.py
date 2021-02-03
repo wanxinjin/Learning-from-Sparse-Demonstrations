@@ -27,16 +27,16 @@ oc.setDyn(dyn)
 path_cost = beta * env.path_cost
 oc.setPathCost(path_cost)
 oc.setFinalCost(env.final_cost)
-oc.setIntegrator(n_grid=25)
+oc.setIntegrator(n_grid=20)
 
 # --------------------------- set initial condition and horizon ------------------------------
 # set initial condition
 ini_r_I = [-8, -8, 5.]
-ini_v_I = [15.5, 5.50, -10.50]
+ini_v_I = [0.0, 0.0, 0.0]
 ini_q = JinEnv.toQuaternion(0, [0, 0, 1])
 ini_w = [0.0, 0.0, 0.0]
 ini_state = ini_r_I + ini_v_I + ini_q + ini_w
-T = 1
+T = 5
 
 # ---------------------- define the loss function and interface function ------------------
 interface_pos_fn = Function('interface', [oc.state], [oc.state[0:3]])
@@ -90,33 +90,43 @@ def getloss_pos_corrections(time_grid, target_waypoints, opt_sol, auxsys_sol):
 
 
 # --------------------------- create different sparse waypionts （just uncomment it) ----------------------------------------
-# taus = np.array([0.06666667, 0.2, 0.4, 0.46666667, 0.66666667])
-# waypoints = np.array([[-4, -6., 4],
-#                       [1, -5., 3],
-#                       [1, -1., 4],
-#                       [-1.0, 1., 4],
-#                       [2.0, 3.0, 4.0]])
+taus = np.array([0.8, 1.5, 2.0, 2.7, 3.8])
+waypoints = np.array([[-4, -6., 4],
+                      [1, -5., 3],
+                      [1, -1., 4],
+                      [-1.0, 1., 4],
+                      [2.0, 3.0, 4.0]])
 
-taus = np.array([ 0.2, 0.46666667, ])*T
-waypoints = np.array([
-                    [1, -5., 3],
-                    [-1.0, 1., 4], ])
+# taus = np.array([ 0.2, 0.46666667])*T
+# waypoints = np.array([
+#                     [1, -5., 3],
+#                     [-1.0, 1., 4]])
 
 # --------------------------- start the learning process --------------------------------
 lr = 5e-3
 loss_trace, parameter_trace = [], []
 current_parameter = np.array([1, .1, .1, .1, .1, .1, -1])
 parameter_trace += [current_parameter.tolist()]
+
+diff_loss_norm = 100
+epsilon = 1e-3
 for j in range(int(500)):
-    time_grid, opt_sol = oc.cocSolver(ini_state, T, current_parameter)
-    auxsys_sol = oc.auxSysSolver(time_grid, opt_sol, current_parameter)
-    loss, diff_loss = getloss_pos_corrections(taus, waypoints, opt_sol, auxsys_sol)
-    current_parameter -= lr * diff_loss
-    # do the projection step
-    current_parameter[0] = fmax(current_parameter[0], 0.00000001)
-    loss_trace += [loss]
-    parameter_trace += [current_parameter.tolist()]
-    print('iter:', j, 'loss:', loss_trace[-1].tolist(), 'parameter:',current_parameter)
+    if diff_loss_norm >= epsilon:
+        time_grid, opt_sol = oc.cocSolver(ini_state, T, current_parameter)
+        auxsys_sol = oc.auxSysSolver(time_grid, opt_sol, current_parameter)
+        loss, diff_loss = getloss_pos_corrections(taus, waypoints, opt_sol, auxsys_sol)
+        current_parameter -= lr * diff_loss
+        # do the projection step
+        current_parameter[0] = fmax(current_parameter[0], 0.00000001)
+        loss_trace += [loss]
+        parameter_trace += [current_parameter.tolist()]
+        
+        diff_loss_norm = np.linalg.norm(diff_loss)
+        # print('iter:', j, 'loss:', loss_trace[-1].tolist(), 'parameter:',current_parameter)
+        print('iter:', j, ', loss:', loss_trace[-1].tolist(), ', loss gradient norm:',diff_loss_norm)
+    else:
+        print("The magnitude of gradient of loss is less than epsilon, stop the iteration.")
+        break
 
 
 # Below is to obtain the final uav trajectory based on the learned objective function (under un-warping settings)

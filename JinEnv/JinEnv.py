@@ -227,7 +227,7 @@ class RobotArm:
         G1 = self.m1 * r1 * g * cos(self.q1) + self.m2 * g * (r2 * cos(self.q1 + self.q2) + self.l1 * cos(self.q1))
         G2 = self.m2 * g * r2 * cos(self.q1 + self.q2)
         G = vertcat(G1, G2)
-        ddq = mtimes(inv(M), -C - G + self.U)  # joint acceleration
+        ddq = mtimes(pinv(M), -C - G + self.U)  # joint acceleration
         self.f = vertcat(self.dq1, self.dq2, ddq)  # continuous state-space representation
 
     def initCost_WeightedDistance(self, wq1=None, wq2=None, wdq1=None, wdq2=None, wu=0.1):
@@ -740,7 +740,7 @@ class Quadrotor:
         dv_I = 1 / self.m * mtimes(C_I_B, self.thrust_B) + self.g_I
         # Euler's law
         dq = 1 / 2 * mtimes(self.omega(self.w_B), self.q)
-        dw = mtimes(inv(self.J_B), self.M_B - mtimes(mtimes(self.skew(self.w_B), self.J_B), self.w_B))
+        dw = mtimes(pinv(self.J_B), self.M_B - mtimes(mtimes(self.skew(self.w_B), self.J_B), self.w_B))
 
         self.X = vertcat(self.r_I, self.v_I, self.q, self.w_B)
         self.U = self.T_B
@@ -1267,7 +1267,7 @@ class Rocket:
         dv_I = 1 / self.m * mtimes(C_I_B, self.T_B) + self.g_I
 
         dq = 1 / 2 * mtimes(self.omega(self.w_B), self.q)
-        dw = mtimes(inv(self.J_B),
+        dw = mtimes(pinv(self.J_B),
                     mtimes(self.skew(self.r_T_B), self.T_B) -
                     mtimes(mtimes(self.skew(self.w_B), self.J_B), self.w_B))
 
