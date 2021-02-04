@@ -109,8 +109,8 @@ current_parameter = np.array([1, .1, .1, .1, .1, .1, -1])
 parameter_trace += [current_parameter.tolist()]
 
 diff_loss_norm = 100
-epsilon = 1e-3
-for j in range(int(500)):
+epsilon = 1e-2
+for j in range(int(1000)):
     if diff_loss_norm >= epsilon:
         time_grid, opt_sol = oc.cocSolver(ini_state, T, current_parameter)
         auxsys_sol = oc.auxSysSolver(time_grid, opt_sol, current_parameter)
