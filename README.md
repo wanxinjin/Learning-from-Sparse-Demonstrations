@@ -10,6 +10,7 @@ Wanxin Jin, Todd D. Murphey, Dana Kulić, Neta Ezer, Shaoshuai Mou. Please find 
 ## Project Structure
 The current version of the project consists of three folders:
 
+
 * **_CPDP_** : a package including an optimal control solver, functionalities for differentiating maximum principle, and functionalities to solve the differential maximum principle.  
 * **_JinEnv_** : an independent package providing various robot environments to simulate on.
 * **_Examples_** : various examples to reproduce the experiments in the paper.
@@ -20,7 +21,16 @@ Please make sure that the following packages have already been installed before
 use of the PDP package or JinEnv Package.
 
    * CasADi: version > 3.5.1. Info: https://web.casadi.org/
+   * IPOPT Info: https://coin-or.github.io/Ipopt/ (Need this for solving NLP in CasADi, the binary installation is fine)
    * Numpy: version > 1.18.1. Info: https://numpy.org/
+   * Transforms3d Info: https://pypi.org/project/transforms3d/
+
+```
+sudo apt update
+sudo apt install coinor-libipopt-dev
+pip3 install numpy transfroms3d casadi
+```
+
 
 ## How to Train Your Robots.
 Below is the procedure of how to apply the codes to train your robot to learn from sparse demonstrations.
@@ -32,6 +42,12 @@ Below is the procedure of how to apply the codes to train your robot to learn fr
 * **Step 5.** Done, check and simulate your robot visually (use animation utilities from JinEnv).
 
 The quickest way to hand on the codes is to check and run the examples under the folder `./Examples/` .
+
+
+```
+$ cd <ROOT_DIRECTORY>
+$ python3 Examples/quad_example.py
+```
 
 
 ## Contact Information and Citation

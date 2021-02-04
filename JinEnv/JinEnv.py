@@ -28,6 +28,8 @@ import mpl_toolkits.mplot3d.art3d as art3d
 from matplotlib.patches import Circle, PathPatch
 import math
 import time
+from dataclasses import dataclass
+import QuadStates
 
 
 # inverted pendulum
@@ -673,7 +675,7 @@ class Quadrotor:
 
     def initDyn(self, Jx=None, Jy=None, Jz=None, mass=None, l=None, c=None):
         # global parameter
-        g = 9.81 # I need to change this for real demo!!!!!
+        g = 9.81
 
         # parameters settings
         parameter = []
@@ -746,7 +748,13 @@ class Quadrotor:
         self.U = self.T_B
         self.f = vertcat(dr_I, dv_I, dq, dw)
 
-    def initCost(self, wr=None, wv=None, wq=None, ww=None, wthrust=0.1):
+    def initCost(self, QuadDesiredStates: QuadStates, wr=None, wv=None, wq=None, ww=None, wthrust=0.1):
+
+        # load the goal states
+        goal_r_I = np.array(QuadDesiredStates.position)
+        goal_v_I = np.array(QuadDesiredStates.velocity)
+        goal_q = QuadDesiredStates.attitude_quaternion
+        goal_w_B = QuadDesiredStates.angular_velocity
 
         parameter = []
         if wr is None:
@@ -806,7 +814,13 @@ class Quadrotor:
                           self.ww * self.cost_w_B + \
                           self.wq * self.cost_q
 
-    def initCost2(self, wthrust=0.1):
+    def initCost2(self, QuadDesiredStates: QuadStates, wthrust=0.1):
+
+        # load the goal states
+        goal_r_I = np.array(QuadDesiredStates.position)
+        goal_v_I = np.array(QuadDesiredStates.velocity)
+        goal_q = QuadDesiredStates.attitude_quaternion
+        goal_w_B = QuadDesiredStates.angular_velocity
 
         parameter = []
 
@@ -837,25 +851,21 @@ class Quadrotor:
         self.cost_auxvar = vcat(parameter)
 
         # goal position in the world frame
-        goal_r_I = np.array([0, 0, 5])
         self.cost_r_I_x = (self.r_I[0] - goal_r_I[0]) ** 2
         self.cost_r_I_y = (self.r_I[1] - goal_r_I[1]) ** 2
         self.cost_r_I_z = (self.r_I[2] - goal_r_I[2]) ** 2
 
         # goal velocity
-        goal_v_I = np.array([0, 0, 0])
         self.cost_v_I_x = (self.v_I[0] - goal_v_I[0]) ** 2
         self.cost_v_I_y = (self.v_I[1] - goal_v_I[1]) ** 2
         self.cost_v_I_z = (self.v_I[2] - goal_v_I[2]) ** 2
 
         # final attitude error
-        goal_q = toQuaternion(0, [0, 0, 1])
         goal_R_B_I = self.dir_cosine(goal_q)
         R_B_I = self.dir_cosine(self.q)
         self.cost_q = trace(np.identity(3) - mtimes(transpose(goal_R_B_I), R_B_I))
 
         # auglar velocity cost
-        goal_w_B = np.array([0, 0, 0])
         self.cost_w_B_x = (self.w_B[0] - goal_w_B[0]) ** 2
         self.cost_w_B_y = (self.w_B[1] - goal_w_B[1]) ** 2
         self.cost_w_B_z = (self.w_B[2] - goal_w_B[2]) ** 2
@@ -873,26 +883,27 @@ class Quadrotor:
                           self.wwx * self.cost_w_B_x + self.wwy * self.cost_w_B_y + self.wwz * self.cost_w_B_z + \
                           self.wq * self.cost_q
 
-    def initCost_Polynomial(self, w_thrust=0.1):
+    def initCost_Polynomial(self, QuadDesiredStates: QuadStates, w_thrust=0.1):
+
+        # load the goal states
+        goal_r_I = np.array(QuadDesiredStates.position)
+        goal_v_I = np.array(QuadDesiredStates.velocity)
+        goal_q = QuadDesiredStates.attitude_quaternion
+        goal_w_B = QuadDesiredStates.angular_velocity
 
         parameter = []
-
         # goal aspect
-        goal_r_I = np.array([8, 8, 0])
         self.cost_goal_r = dot(self.r_I - goal_r_I, self.r_I - goal_r_I)
 
         # velocity aspect
-        goal_v_I = np.array([0, 0, 0])
         self.cost_goal_v = dot(self.v_I - goal_v_I, self.v_I - goal_v_I)
 
         # orientation aspect
-        goal_q = toQuaternion(0, [0, 0, 1])
         goal_R_B_I = self.dir_cosine(goal_q)
         R_B_I = self.dir_cosine(self.q)
         self.cost_goal_q = trace(np.identity(3) - mtimes(transpose(goal_R_B_I), R_B_I))
 
         # angular aspect
-        goal_w_B = np.array([0, 0, 0])
         self.cost_goal_w = dot(self.w_B - goal_w_B, self.w_B - goal_w_B)
 
         # thrust aspect
