@@ -16,18 +16,12 @@ from QuadAlgorithm import QuadAlgorithm
 
 if __name__ == "__main__":
     # define the quadrotor dynamics parameters
-    QuadParaInput = QuadPara()
-    QuadParaInput.inertial_x = 1.0
-    QuadParaInput.inertial_y = 1.0
-    QuadParaInput.inertial_z = 1.0
-    QuadParaInput.mass = 1.0
-    QuadParaInput.l = 1.0
-    QuadParaInput.c = 0.02
+    QuadParaInput = QuadPara(inertial_list=[1.0, 1.0, 1.0], mass=1.0, l=1.0, c=0.02)
 
     # the learning rate
     learning_rate = 5e-3
     # the maximum iteration steps
-    iter_num = 5
+    iter_num = 3
     # number of grids for nonlinear programming solver
     n_grid = 25
 

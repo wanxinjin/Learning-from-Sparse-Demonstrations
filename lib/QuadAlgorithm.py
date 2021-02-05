@@ -42,10 +42,38 @@ class QuadAlgorithm(object):
         self.iter_num = iter_num
         self.n_grid = n_grid
 
+
+    def settings(self, QuadDesiredStates: QuadStates):
+        """
+        Do the settings and defined the goal states.
+        Rerun this function everytime the initial condition or goal states change.
+        """
+
         # load environment
         self.env = JinEnv.Quadrotor()
         self.env.initDyn(Jx=self.QuadPara.inertial_x, Jy=self.QuadPara.inertial_y, Jz=self.QuadPara.inertial_z, \
             mass=self.QuadPara.mass, l=self.QuadPara.l, c=self.QuadPara.c)
+        # set the desired goal states
+        self.env.initCost_Polynomial(QuadDesiredStates, w_thrust=0.1)
+
+        # create UAV optimal control object with time-warping function
+        self.oc = CPDP.COCSys()
+        beta = SX.sym('beta')
+        dyn = beta * self.env.f
+        self.oc.setAuxvarVariable(vertcat(beta, self.env.cost_auxvar))
+        self.oc.setStateVariable(self.env.X)
+        self.oc.setControlVariable(self.env.U)
+        self.oc.setDyn(dyn)
+        path_cost = beta * self.env.path_cost
+        self.oc.setPathCost(path_cost)
+        self.oc.setFinalCost(self.env.final_cost)
+        self.oc.setIntegrator(self.n_grid)
+
+        # define the loss function and interface function
+        self.interface_pos_fn = Function('interface', [self.oc.state], [self.oc.state[0:3]])
+        self.interface_ori_fn = Function('interface', [self.oc.state], [self.oc.state[6:10]])
+        self.diff_interface_pos_fn = Function('diff_interface', [self.oc.state], [jacobian(self.oc.state[0:3], self.oc.state)])
+        self.diff_interface_ori_fn = Function('diff_interface', [self.oc.state], [jacobian(self.oc.state[6:10], self.oc.state)])
 
 
     def run(self, QuadInitialCondition: QuadStates, QuadDesiredStates: QuadStates, SparseInput: DemoSparse, print_flag: bool, save_flag: bool):
@@ -127,35 +155,6 @@ class QuadAlgorithm(object):
             name_prefix = os.getcwd() + '/data/uav_results_random_' + time.strftime("%Y%m%d%H%M%S")
             sio.savemat(name_prefix + '.mat', {'results': save_data})
             #self.env.play_animation(self.QuadPara.l, opt_state_traj, name_prefix, save_option=True)
-
-
-    def settings(self, QuadDesiredStates: QuadStates):
-        """
-        Do the settings and defined the goal states.
-        Rerun this function everytime the initial condition or goal states change.
-        """
-
-        # set the desired goal states
-        self.env.initCost_Polynomial(QuadDesiredStates, w_thrust=0.1)
-
-        # create UAV optimal control object with time-warping function
-        self.oc = CPDP.COCSys()
-        beta = SX.sym('beta')
-        dyn = beta * self.env.f
-        self.oc.setAuxvarVariable(vertcat(beta, self.env.cost_auxvar))
-        self.oc.setStateVariable(self.env.X)
-        self.oc.setControlVariable(self.env.U)
-        self.oc.setDyn(dyn)
-        path_cost = beta * self.env.path_cost
-        self.oc.setPathCost(path_cost)
-        self.oc.setFinalCost(self.env.final_cost)
-        self.oc.setIntegrator(self.n_grid)
-
-        # define the loss function and interface function
-        self.interface_pos_fn = Function('interface', [self.oc.state], [self.oc.state[0:3]])
-        self.interface_ori_fn = Function('interface', [self.oc.state], [self.oc.state[6:10]])
-        self.diff_interface_pos_fn = Function('diff_interface', [self.oc.state], [jacobian(self.oc.state[0:3], self.oc.state)])
-        self.diff_interface_ori_fn = Function('diff_interface', [self.oc.state], [jacobian(self.oc.state[6:10], self.oc.state)])
 
 
     def getloss_pos_corrections(self, time_grid, target_waypoints, opt_sol, auxsys_sol):
