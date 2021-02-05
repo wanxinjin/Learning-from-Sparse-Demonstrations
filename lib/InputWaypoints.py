@@ -19,6 +19,8 @@ class InputWaypoints(object):
     space_limit_y: list
     # the lab space limit [meter] in z-axis [z_min, z_max]
     space_limit_y: list
+    # the average speed for the quadrotor [m/s]
+    quad_average_speed: float
 
 
     def __init__(self, config_data):
@@ -37,9 +39,16 @@ class InputWaypoints(object):
         self.space_limit_y = config_data["LAB_SPACE_LIMIT"]["LIMIT_Y"]
         # the lab space limit [meter] in z-axis [z_min, z_max]
         self.space_limit_z = config_data["LAB_SPACE_LIMIT"]["LIMIT_Z"]
+        # the average speed for the quadrotor [m/s]
+        self.quad_average_speed = float(config_data["QUAD_AVERAGE_SPEED"])
 
 
     def run(self, QuadInitialCondition: QuadStates, QuadDesiredStates: QuadStates):
+        """
+        Run this method to obtain human inputs as sparse demonstrations.
+        """
+
+        # for the top-down view
         fig_top_down = plt.figure()
         ax_top_down = fig_top_down.add_subplot(1, 1, 1)
         # set axis limits
@@ -63,7 +72,7 @@ class InputWaypoints(object):
         # set legends
         ax_top_down.add_artist(plt.legend(handles=[red_patch]))
         plt.legend(loc="upper left")
-        plt.title('Select waypoints in top-down view', fontweight ='bold')
+        plt.title('Select waypoints in top-down view. Middle click to terminate.', fontweight ='bold')
         print("Click your waypoints in XOY plane, order from -x to +x, -y to +y.")
         print("Middle click to terminate ginput.")
         waypoints_top_down = plt.ginput(0,0)
@@ -83,7 +92,7 @@ class InputWaypoints(object):
 
 
 
-
+        # for the right-left view
         fig_right_left = plt.figure()
         ax_right_left = fig_right_left.add_subplot(1, 1, 1)
         # set axis limits
@@ -112,7 +121,7 @@ class InputWaypoints(object):
         for i in range(0, len(waypoints_top_down)):
             ax_right_left.scatter(waypoints_top_down[i][0], 0, c='C0')
 
-        plt.title('Select waypoints in right-left view (only read z values)', fontweight ='bold')
+        plt.title('Select waypoints in right-left view (only read z-axis). Middle click to terminate.', fontweight ='bold')
         print("Click your waypoints in XOZ plane, order from -x to +x, -y to +y.")
         print("The blue points are the previous waypoints you select in XOY plane.")
         print("Middle click to terminate ginput.")
@@ -134,6 +143,7 @@ class InputWaypoints(object):
             waypoints_3d_plot[2].append(waypoints_output[i][2])
 
 
+        # for the 3D plot
         fig_3d = plt.figure()
         ax_3d = fig_3d.add_subplot(111, projection='3d')
 
@@ -157,11 +167,29 @@ class InputWaypoints(object):
         ax_3d.set_ylabel("y")
         ax_3d.set_zlabel("z")
         plt.legend(loc="upper left")
-        plt.title('Waypoints in 3D', fontweight ='bold')
-
-
+        plt.title('Waypoints in 3D. Close this window to continue.', fontweight ='bold')
         plt.show()
 
-        return waypoints_output
+        # a 1D list to store the time-stamp for each waypoint, including the start and goal
+        time_list_all = self.generate_time(waypoints_output, QuadInitialCondition, QuadDesiredStates)
+
+        return waypoints_output, time_list_all
 
 
+    def generate_time(self, waypoints_output: list, QuadInitialCondition: QuadStates, QuadDesiredStates: QuadStates):
+        """
+        Based on start, goal, and waypoints, generate the time (tau) for each point.
+        """
+
+        # waypoints including start and goal
+        waypoints_all = [QuadInitialCondition.position] + waypoints_output + [QuadDesiredStates.position]
+        # a 1D list to store the time-stamp for each waypoint, including the start and goal
+        time_list_all = [0.0]
+        distance_total = 0.0
+
+        for i in range(1, len(waypoints_all)):
+            distance_current = np.linalg.norm( np.array(waypoints_all[i]) - np.array(waypoints_all[i-1]) )
+            time_segment = round(distance_current/self.quad_average_speed, 2)
+            time_list_all.append(time_segment+time_list_all[i-1])
+
+        return time_list_all

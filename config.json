@@ -1,4 +1,5 @@
 {
+    "QUAD_AVERAGE_SPEED": 0.5,
 
     "LAB_SPACE_LIMIT": {
         "LIMIT_X": [-3.2, 3.2],

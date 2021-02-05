@@ -33,7 +33,7 @@ if __name__ == "__main__":
         [1.5, 1.5, 1.0],
         [2.0, 2.0, 1.2],
         [2.5, 2.5, 1.5]]
-    SparseInput.time_lists = [1.0, 2.0, 3.0, 4.0, 5.0]
+    SparseInput.time_list = [1.0, 2.0, 3.0, 4.0, 5.0]
     SparseInput.time_horizon = 6
 
     # define the initial condition

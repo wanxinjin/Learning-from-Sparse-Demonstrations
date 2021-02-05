@@ -30,5 +30,23 @@ if __name__ == "__main__":
     QuadDesiredStates = QuadStates()
     QuadDesiredStates.position = [2.5, 1.0, 1.5]
 
+    # initialize the class
     Input = InputWaypoints(config_data)
-    waypoints_output = Input.run(QuadInitialCondition, QuadDesiredStates)
+
+    # run this method to obtain human inputs
+    # waypoints_output is a 2D list, each sub-list is a waypoint [x, y, z], not including the start and goal
+    # time_list_all is a 1D list to store the time-stamp for each waypoint, including the start and goal
+    waypoints_output, time_list_all = Input.run(QuadInitialCondition, QuadDesiredStates)
+
+    # define the sparse demonstration
+    SparseInput = DemoSparse()
+    SparseInput.waypoints = waypoints_output
+    SparseInput.time_list = time_list_all[1 : -1]
+    SparseInput.time_horizon = time_list_all[-1]
+
+    print("waypoints")
+    print(SparseInput.waypoints)
+    print("time_list")
+    print(SparseInput.time_list)
+    print("time_horizon")
+    print(SparseInput.time_horizon)
