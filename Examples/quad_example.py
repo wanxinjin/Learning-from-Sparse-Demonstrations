@@ -4,16 +4,14 @@ import sys
 import time
 sys.path.append(os.getcwd()+'/CPDP')
 sys.path.append(os.getcwd()+'/JinEnv')
-import CPDP
-import JinEnv
-from casadi import *
-import scipy.io as sio
+sys.path.append(os.getcwd()+'/lib')
 import numpy as np
 import transforms3d
-import QuadPara
-import QuadStates
-import DemoSparse
-import QuadAlgorithm
+from dataclasses import dataclass, field
+from QuadPara import QuadPara
+from QuadStates import QuadStates
+from DemoSparse import DemoSparse
+from QuadAlgorithm import QuadAlgorithm
 
 
 if __name__ == "__main__":
@@ -29,7 +27,7 @@ if __name__ == "__main__":
     # the learning rate
     learning_rate = 5e-3
     # the maximum iteration steps
-    iter_num = 1000
+    iter_num = 5
     # number of grids for nonlinear programming solver
     n_grid = 25
 
@@ -60,10 +58,9 @@ if __name__ == "__main__":
     QuadDesiredStates.attitude_quaternion = transforms3d.quaternions.mat2quat(R).tolist()
     QuadDesiredStates.angular_velocity = [0, 0, 0]
 
-
     # create the quadrotor algorithm solver
     Solver = QuadAlgorithm(QuadParaInput, learning_rate, iter_num, n_grid)
 
     # solve it
-    Solver.run(QuadInitialCondition, QuadDesiredStates, SparseInput, print_flag=True, save_flag=False)
+    Solver.run(QuadInitialCondition, QuadDesiredStates, SparseInput, print_flag=True, save_flag=True)
 

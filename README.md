@@ -21,13 +21,14 @@ Please make sure that the following packages have already been installed before
 use of the PDP package or JinEnv Package.
 
    * CasADi: version > 3.5.1. Info: https://web.casadi.org/
-   * IPOPT Info: https://coin-or.github.io/Ipopt/ (Need this for solving NLP in CasADi, the binary installation is fine)
+   * IPOPT Info: https://coin-or.github.io/Ipopt/ (need this for solving NLP in CasADi, the binary installation is fine)
    * Numpy: version > 1.18.1. Info: https://numpy.org/
    * Transforms3d Info: https://pypi.org/project/transforms3d/
+   * FFmpeg Info: https://ffmpeg.org/ (need this for saving the data visualization)
 
 ```
 sudo apt update
-sudo apt install coinor-libipopt-dev
+sudo apt install coinor-libipopt-dev ffmpeg
 pip3 install numpy transfroms3d casadi
 ```
 

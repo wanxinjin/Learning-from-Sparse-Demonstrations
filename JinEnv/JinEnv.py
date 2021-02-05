@@ -17,6 +17,9 @@
 
 '''
 
+import os
+import sys
+sys.path.append(os.getcwd()+'/lib')
 from casadi import *
 import numpy as np
 import matplotlib.pyplot as plt
@@ -28,8 +31,8 @@ import mpl_toolkits.mplot3d.art3d as art3d
 from matplotlib.patches import Circle, PathPatch
 import math
 import time
-from dataclasses import dataclass
-import QuadStates
+from dataclasses import dataclass, field
+from QuadStates import QuadStates
 
 
 # inverted pendulum
@@ -985,7 +988,7 @@ class Quadrotor:
 
         return position
 
-    def play_animation(self, wing_len, state_traj, state_traj_ref=None, dt=0.1, save_option=0, title='UAV Maneuvering',
+    def play_animation(self, wing_len, state_traj, file_name_prefix: str, save_option: bool, state_traj_ref=None, dt=0.1, title='UAV Maneuvering',
                        horizon=1, waypoints=None):
 
         # plot
@@ -1164,10 +1167,10 @@ class Quadrotor:
 
         ani = animation.FuncAnimation(fig, update_traj, sim_horizon, interval=80, blit=True, cache_frame_data=False)
 
-        if save_option != 0:
+        if save_option == True:
             Writer = animation.writers['ffmpeg']
             writer = Writer(fps=10, metadata=dict(artist='Me'), bitrate=-1)
-            ani.save('uav_5_learning_3d.mp4', writer=writer, dpi=300)
+            ani.save(file_name_prefix + '.mp4', writer=writer, dpi=300)
             print('save_success')
 
         plt.show()

@@ -10,9 +10,10 @@ import JinEnv
 from casadi import *
 import scipy.io as sio
 import numpy as np
-import QuadPara
-import QuadStates
-import DemoSparse
+from dataclasses import dataclass, field
+from QuadPara import QuadPara
+from QuadStates import QuadStates
+from DemoSparse import DemoSparse
 
 
 class QuadAlgorithm(object):
@@ -123,8 +124,9 @@ class QuadAlgorithm(object):
                         'horizon': horizon,
                         'T': T}
 
-            sio.savemat(os.getcwd() + '/data/uav_results_random_' + time.strftime("%Y%m%d%H%M%S") + '.mat', {'results': save_data})
-
+            name_prefix = os.getcwd() + '/data/uav_results_random_' + time.strftime("%Y%m%d%H%M%S")
+            sio.savemat(name_prefix + '.mat', {'results': save_data})
+            #self.env.play_animation(self.QuadPara.l, opt_state_traj, name_prefix, save_option=True)
 
 
     def settings(self, QuadDesiredStates: QuadStates):
