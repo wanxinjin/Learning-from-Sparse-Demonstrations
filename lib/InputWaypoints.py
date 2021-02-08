@@ -173,7 +173,13 @@ class InputWaypoints(object):
         # a 1D list to store the time-stamp for each waypoint, including the start and goal
         time_list_all = self.generate_time(waypoints_output, QuadInitialCondition, QuadDesiredStates)
 
-        return waypoints_output, time_list_all
+        # define the sparse demonstration
+        SparseInput = DemoSparse()
+        SparseInput.waypoints = waypoints_output
+        SparseInput.time_list = time_list_all[1 : -1]
+        SparseInput.time_horizon = time_list_all[-1]
+
+        return SparseInput
 
 
     def generate_time(self, waypoints_output: list, QuadInitialCondition: QuadStates, QuadDesiredStates: QuadStates):

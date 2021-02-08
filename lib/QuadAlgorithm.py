@@ -152,8 +152,16 @@ class QuadAlgorithm(object):
                         'horizon': horizon,
                         'T': T}
 
-            name_prefix = os.getcwd() + '/data/uav_results_random_' + time.strftime("%Y%m%d%H%M%S")
-            sio.savemat(name_prefix + '.mat', {'results': save_data})
+            time_prefix = time.strftime("%Y%m%d%H%M%S")
+
+            # save the results as mat files
+            name_prefix_mat = os.getcwd() + '/data/uav_results_random_' + time_prefix
+            sio.savemat(name_prefix_mat + '.mat', {'results': save_data})
+
+            # save the trajectory as csv files
+            name_prefix_csv = os.getcwd() + '/trajectories/' + time_prefix + '.csv'
+            # csc file has the same column and row of numpy_array
+            # np.savetxt(name_prefix_csv, numpy_array, delimiter=",")
             #self.env.play_animation(self.QuadPara.l, opt_state_traj, name_prefix, save_option=True)
 
 

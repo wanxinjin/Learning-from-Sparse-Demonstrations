@@ -34,15 +34,10 @@ if __name__ == "__main__":
     Input = InputWaypoints(config_data)
 
     # run this method to obtain human inputs
+    # SparseInput is an instance of dataclass DemoSparse
     # waypoints_output is a 2D list, each sub-list is a waypoint [x, y, z], not including the start and goal
     # time_list_all is a 1D list to store the time-stamp for each waypoint, including the start and goal
-    waypoints_output, time_list_all = Input.run(QuadInitialCondition, QuadDesiredStates)
-
-    # define the sparse demonstration
-    SparseInput = DemoSparse()
-    SparseInput.waypoints = waypoints_output
-    SparseInput.time_list = time_list_all[1 : -1]
-    SparseInput.time_horizon = time_list_all[-1]
+    SparseInput= Input.run(QuadInitialCondition, QuadDesiredStates)
 
     print("waypoints")
     print(SparseInput.waypoints)
