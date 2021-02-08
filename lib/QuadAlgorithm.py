@@ -131,11 +131,19 @@ class QuadAlgorithm(object):
         _, opt_sol = self.oc.cocSolver(ini_state, horizon, current_parameter)
         
         # generate the time inquiry grid with N is the point number
-        time_steps = np.linspace(0, horizon, num=100)
+        # time_steps = np.linspace(0, horizon, num=100)
+        time_steps = np.linspace(0, round(horizon,2), num=round(horizon/0.01)+1)
+        print("time_steps")
+        print(time_steps)
+
         opt_traj = opt_sol(time_steps)
         
         # state trajectory ----- N*[r,v,q,w]
         opt_state_traj = opt_traj[:, :self.oc.n_state]
+
+        print("opt_state_traj")
+        print(opt_state_traj)
+
         # control trajectory ---- N*[t1,t2,t3,t4]
         opt_control_traj = opt_traj[:, self.oc.n_state : self.oc.n_state + self.oc.n_control]
 
