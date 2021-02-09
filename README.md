@@ -6,6 +6,8 @@ Wanxin Jin, Todd D. Murphey, Dana Kulić, Neta Ezer, Shaoshuai Mou. Please find 
 * Paper: https://arxiv.org/abs/2008.02159 for technical details.
 * Demos: https://wanxinjin.github.io/posts/lfsd for video demos.
 
+This repo has been tested with:
+* Python 3.9.1, Ubuntu 20.04.1 LTS
 
 ## Project Structure
 The current version of the project consists of three folders:
@@ -27,11 +29,12 @@ use of the PDP package or JinEnv Package.
    * [Scipy](https://www.scipy.org/)
    * [matplotlib](https://matplotlib.org/)
    * [FFmpeg](https://ffmpeg.org/): need this for saving the data visualization.
+   * [PyQt5](https://pypi.org/project/PyQt5/)
 
 ```
 sudo apt update
 sudo apt install coinor-libipopt-dev ffmpeg
-pip3 install casadi numpy transfroms3d scipy matplotlib
+pip3 install casadi numpy transfroms3d scipy matplotlib pyqt5
 ```
 
 
