@@ -12,6 +12,8 @@ from dataclasses import dataclass, field
 from QuadStates import QuadStates
 from DemoSparse import DemoSparse
 from InputWaypoints import InputWaypoints
+from ObsInfo import ObsInfo
+from generate_random_obs import generate_random_obs
 
 
 if __name__ == "__main__":
@@ -21,6 +23,11 @@ if __name__ == "__main__":
     # Read the configuration from the json file
     json_file = open(config_file_name)
     config_data = json.load(json_file)
+
+    # generate random obstacles
+    num_obs = 8 # number of obstacles
+    size_list=[0.2, 0.3, 0.4] # size lenth, width, height in x,y,z axis
+    ObsList = generate_random_obs(num_obs, size_list, config_data)
 
     # define the initial condition
     QuadInitialCondition = QuadStates()
@@ -37,7 +44,7 @@ if __name__ == "__main__":
     # SparseInput is an instance of dataclass DemoSparse
     # waypoints_output is a 2D list, each sub-list is a waypoint [x, y, z], not including the start and goal
     # time_list_all is a 1D list to store the time-stamp for each waypoint, including the start and goal
-    SparseInput= Input.run(QuadInitialCondition, QuadDesiredStates)
+    SparseInput = Input.run(QuadInitialCondition, QuadDesiredStates, ObsList)
 
     print("waypoints")
     print(SparseInput.waypoints)

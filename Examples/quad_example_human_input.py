@@ -23,6 +23,11 @@ if __name__ == "__main__":
     json_file = open(config_file_name)
     config_data = json.load(json_file)
 
+    # generate random obstacles
+    num_obs = 8 # number of obstacles
+    size_list=[0.2, 0.3, 0.4] # size lenth, width, height in x,y,z axis
+    ObsList = generate_random_obs(num_obs, size_list, config_data)
+
     # define the quadrotor dynamics parameters
     QuadParaInput = QuadPara(inertial_list=[1.0, 1.0, 1.0], mass=1.0, l=1.0, c=0.02)
 
@@ -52,7 +57,7 @@ if __name__ == "__main__":
     # run this method to obtain human inputs
     # SparseInput is an instance of dataclass DemoSparse
     Input = InputWaypoints(config_data)
-    SparseInput= Input.run(QuadInitialCondition, QuadDesiredStates)
+    SparseInput= Input.run(QuadInitialCondition, QuadDesiredStates, ObsList)
 
     # create the quadrotor algorithm solver
     Solver = QuadAlgorithm(QuadParaInput, learning_rate, iter_num, n_grid)

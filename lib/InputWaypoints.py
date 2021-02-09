@@ -10,6 +10,7 @@ from mpl_toolkits.mplot3d import Axes3D
 from dataclasses import dataclass, field
 from DemoSparse import DemoSparse
 from QuadStates import QuadStates
+from ObsInfo import ObsInfo
 
 
 class InputWaypoints(object):
@@ -43,83 +44,99 @@ class InputWaypoints(object):
         self.quad_average_speed = float(config_data["QUAD_AVERAGE_SPEED"])
 
 
-    def run(self, QuadInitialCondition: QuadStates, QuadDesiredStates: QuadStates):
+    def run(self, QuadInitialCondition: QuadStates, QuadDesiredStates: QuadStates, ObsList: list):
         """
         Run this method to obtain human inputs as sparse demonstrations.
         """
 
         # for the top-down view
-        fig_top_down = plt.figure()
-        ax_top_down = fig_top_down.add_subplot(1, 1, 1)
+        self.fig_top_down = plt.figure()
+        self.ax_top_down = self.fig_top_down.add_subplot(1, 1, 1)
         # set axis limits
-        ax_top_down.set_xlim([self.space_limit_x[0]-1.2, self.space_limit_x[1]+1.2])
-        ax_top_down.set_ylim([self.space_limit_y[0]-1.2, self.space_limit_y[1]+1.2])
-        ax_top_down.set_xlabel("x")
-        ax_top_down.set_ylabel("y")
-        ax_top_down.set_aspect('equal')
+        self.ax_top_down.set_xlim([self.space_limit_x[0]-1.2, self.space_limit_x[1]+1.2])
+        self.ax_top_down.set_ylim([self.space_limit_y[0]-1.2, self.space_limit_y[1]+1.2])
+        self.ax_top_down.set_xlabel("x")
+        self.ax_top_down.set_ylabel("y")
+        self.ax_top_down.set_aspect('equal')
         # set obstacle legend
         red_patch = patches.Patch(color='red', label='Obstacles')
         # plot lab sapce boundary
-        ax_top_down.plot(self.space_limit_x, [self.space_limit_y[0],self.space_limit_y[0]], color='black')
-        ax_top_down.plot(self.space_limit_x, [self.space_limit_y[1],self.space_limit_y[1]], color='black')
-        ax_top_down.plot([self.space_limit_x[0],self.space_limit_x[0]], self.space_limit_y, color='black')
-        ax_top_down.plot([self.space_limit_x[1],self.space_limit_x[1]], self.space_limit_y, color='black')
+        self.ax_top_down.plot(self.space_limit_x, [self.space_limit_y[0],self.space_limit_y[0]], color='black')
+        self.ax_top_down.plot(self.space_limit_x, [self.space_limit_y[1],self.space_limit_y[1]], color='black')
+        self.ax_top_down.plot([self.space_limit_x[0],self.space_limit_x[0]], self.space_limit_y, color='black')
+        self.ax_top_down.plot([self.space_limit_x[1],self.space_limit_x[1]], self.space_limit_y, color='black')
 
         # plot start and goal
-        ax_top_down.scatter(QuadInitialCondition.position[0], QuadInitialCondition.position[1], label='start', color='green')
-        ax_top_down.scatter(QuadDesiredStates.position[0], QuadDesiredStates.position[1], label='goal', color='violet')
+        self.ax_top_down.scatter(QuadInitialCondition.position[0], QuadInitialCondition.position[1], label='start', color='green')
+        self.ax_top_down.scatter(QuadDesiredStates.position[0], QuadDesiredStates.position[1], label='goal', color='violet')
         
+        # plot obstacles
+        num_obs = len(ObsList)
+        if num_obs > 0.5:
+            for i in range(0, num_obs):
+                # in XOY plane, width means length in ObsInfo, height means width in ObsInfo
+                rect = patches.Rectangle([ ObsList[i].center[0]-0.5*ObsList[i].length, ObsList[i].center[1]-0.5*ObsList[i].width ], \
+                    width=ObsList[i].length, height=ObsList[i].width, linewidth=1, edgecolor='r', facecolor='r')
+                # Add the patch to the Axes
+                self.ax_top_down.add_patch(rect)
+
         # set legends
-        ax_top_down.add_artist(plt.legend(handles=[red_patch]))
+        self.ax_top_down.add_artist(plt.legend(handles=[red_patch]))
         plt.legend(loc="upper left")
         plt.title('Select waypoints in top-down view. Middle click to terminate.', fontweight ='bold')
         print("Click your waypoints in XOY plane, order from -x to +x, -y to +y.")
         print("Middle click to terminate ginput.")
         waypoints_top_down = plt.ginput(0,0)
-        
-        # for i in range(0, len(waypoints_top_down)):
-        #     print("Waypoint XOY" + str(i+1) + ": x = " + str(waypoints_top_down[i][0]) + \
-        #         ", y = " + str(waypoints_top_down[i][1]))
         print("Waypoints selection in top-down view completed. Don't close Figure 1 yet.")
 
-
-
-        # a = [10, 40, 70]
-        # for idx_obs in range(0,3):
-        #     rect = patches.Rectangle(a[idx_obs], width=5, height=10, linewidth=1, edgecolor='r', facecolor='r')
-        #     # Add the patch to the Axes
-        #     ax.add_patch(rect)
-
+        # plot waypoints
+        for i in range(0, len(waypoints_top_down)):
+            # print("Waypoint XOY" + str(i+1) + ": x = " + str(waypoints_top_down[i][0]) + \
+            #     ", y = " + str(waypoints_top_down[i][1]))
+            self.ax_top_down.scatter(waypoints_top_down[i][0], waypoints_top_down[i][1], c='C0')
+        plt.draw()
 
 
         # for the right-left view
-        fig_right_left = plt.figure()
-        ax_right_left = fig_right_left.add_subplot(1, 1, 1)
+        self.fig_right_left = plt.figure()
+        self.ax_right_left = self.fig_right_left.add_subplot(1, 1, 1)
         # set axis limits
-        ax_right_left.set_xlim([self.space_limit_x[0]-1.2, self.space_limit_x[1]+1.2])
-        ax_right_left.set_ylim([self.space_limit_z[0]-0.2, self.space_limit_z[1]+1.5])
-        ax_right_left.set_xlabel("x")
-        ax_right_left.set_ylabel("z")
-        ax_right_left.set_aspect('equal')
+        self.ax_right_left.set_xlim([self.space_limit_x[0]-1.2, self.space_limit_x[1]+1.2])
+        self.ax_right_left.set_ylim([self.space_limit_z[0]-0.2, self.space_limit_z[1]+1.5])
+        self.ax_right_left.set_xlabel("x")
+        self.ax_right_left.set_ylabel("z")
+        self.ax_right_left.set_aspect('equal')
         # set obstacle legend
         red_patch = patches.Patch(color='red', label='Obstacles')
         # plot lab sapce boundary
-        ax_right_left.plot(self.space_limit_x, [self.space_limit_z[0],self.space_limit_z[0]], color='black')
-        ax_right_left.plot(self.space_limit_x, [self.space_limit_z[1],self.space_limit_z[1]], color='black')
-        ax_right_left.plot([self.space_limit_x[0],self.space_limit_x[0]], self.space_limit_z, color='black')
-        ax_right_left.plot([self.space_limit_x[1],self.space_limit_x[1]], self.space_limit_z, color='black')
+        self.ax_right_left.plot(self.space_limit_x, [self.space_limit_z[0],self.space_limit_z[0]], color='black')
+        self.ax_right_left.plot(self.space_limit_x, [self.space_limit_z[1],self.space_limit_z[1]], color='black')
+        self.ax_right_left.plot([self.space_limit_x[0],self.space_limit_x[0]], self.space_limit_z, color='black')
+        self.ax_right_left.plot([self.space_limit_x[1],self.space_limit_x[1]], self.space_limit_z, color='black')
         # plot the ground
-        ax_right_left.plot([self.space_limit_x[0]-1.2,self.space_limit_x[1]+1.2], [0,0], linestyle='dashed', color='black', label='ground')
+        self.ax_right_left.plot([self.space_limit_x[0]-1.2,self.space_limit_x[1]+1.2], [0,0], linestyle='dashed', color='black', label='ground')
 
         # plot start and goal
-        ax_right_left.scatter(QuadInitialCondition.position[0], QuadInitialCondition.position[2], label='start', color='green')
-        ax_right_left.scatter(QuadDesiredStates.position[0], QuadDesiredStates.position[2], label='goal', color='violet')
+        self.ax_right_left.scatter(QuadInitialCondition.position[0], QuadInitialCondition.position[2], label='start', color='green')
+        self.ax_right_left.scatter(QuadDesiredStates.position[0], QuadDesiredStates.position[2], label='goal', color='violet')
+        
+        # plot obstacles
+        num_obs = len(ObsList)
+        if num_obs > 0.5:
+            for i in range(0, num_obs):
+                # in XOZ plane, width means length in ObsInfo, height means height in ObsInfo
+                rect = patches.Rectangle([ ObsList[i].center[0]-0.5*ObsList[i].length, ObsList[i].center[2]-0.5*ObsList[i].height ], \
+                    width=ObsList[i].length, height=ObsList[i].height, linewidth=1, edgecolor='r', facecolor='r')
+                # Add the patch to the Axes
+                self.ax_right_left.add_patch(rect)
+        
         # set legends
-        ax_right_left.add_artist(plt.legend(handles=[red_patch]))
+        self.ax_right_left.add_artist(plt.legend(handles=[red_patch]))
         plt.legend(loc="upper left")
 
+        # plot waypoints
         for i in range(0, len(waypoints_top_down)):
-            ax_right_left.scatter(waypoints_top_down[i][0], 0, c='C0')
+            self.ax_right_left.scatter(waypoints_top_down[i][0], 0, c='C0')
 
         plt.title('Select waypoints in right-left view (only read z-axis). Middle click to terminate.', fontweight ='bold')
         print("Click your waypoints in XOZ plane, order from -x to +x, -y to +y.")
@@ -127,6 +144,11 @@ class InputWaypoints(object):
         print("Middle click to terminate ginput.")
         waypoints_right_left = plt.ginput(0,0)
         print("Waypoints selection in right-left view completed. Now close Figure 1 & 2.")
+
+        # plot waypoints
+        for i in range(0, len(waypoints_right_left)):
+            self.ax_right_left.scatter(waypoints_right_left[i][0], waypoints_right_left[i][1], c='C0')
+        plt.draw()
 
 
         # waypoints output
@@ -144,28 +166,34 @@ class InputWaypoints(object):
 
 
         # for the 3D plot
-        fig_3d = plt.figure()
-        ax_3d = fig_3d.add_subplot(111, projection='3d')
+        self.fig_3d = plt.figure()
+        self.ax_3d = self.fig_3d.add_subplot(111, projection='3d')
 
         # plot waypoints
-        ax_3d.plot3D(waypoints_3d_plot[0], waypoints_3d_plot[1], waypoints_3d_plot[2], 'blue', label='waypoints')
+        self.ax_3d.plot3D(waypoints_3d_plot[0], waypoints_3d_plot[1], waypoints_3d_plot[2], 'blue', label='waypoints')
         for i in range(0, len(waypoints_output)):
-            ax_3d.scatter(waypoints_output[i][0], waypoints_output[i][1], waypoints_output[i][2], c='C0')
+            self.ax_3d.scatter(waypoints_output[i][0], waypoints_output[i][1], waypoints_output[i][2], c='C0')
 
         # plot start and goal
-        ax_3d.scatter(QuadInitialCondition.position[0], QuadInitialCondition.position[1], QuadInitialCondition.position[2], label='start', color='green')
-        ax_3d.scatter(QuadDesiredStates.position[0], QuadDesiredStates.position[1], QuadDesiredStates.position[2], label='goal', color='violet')
-        ax_3d.plot([QuadInitialCondition.position[0], waypoints_output[0][0]], [QuadInitialCondition.position[1], waypoints_output[0][1]], \
+        self.ax_3d.scatter(QuadInitialCondition.position[0], QuadInitialCondition.position[1], QuadInitialCondition.position[2], label='start', color='green')
+        self.ax_3d.scatter(QuadDesiredStates.position[0], QuadDesiredStates.position[1], QuadDesiredStates.position[2], label='goal', color='violet')
+        self.ax_3d.plot([QuadInitialCondition.position[0], waypoints_output[0][0]], [QuadInitialCondition.position[1], waypoints_output[0][1]], \
             [QuadInitialCondition.position[2], waypoints_output[0][2]], 'blue')
-        ax_3d.plot([QuadDesiredStates.position[0], waypoints_output[-1][0]], [QuadDesiredStates.position[1], waypoints_output[-1][1]], \
+        self.ax_3d.plot([QuadDesiredStates.position[0], waypoints_output[-1][0]], [QuadDesiredStates.position[1], waypoints_output[-1][1]], \
             [QuadDesiredStates.position[2], waypoints_output[-1][2]], 'blue')
 
-        ax_3d.set_xlim([self.space_limit_x[0]-1.2, self.space_limit_x[1]+1.2])
-        ax_3d.set_ylim([self.space_limit_y[0]-1.2, self.space_limit_y[1]+1.2])
-        ax_3d.set_zlim([self.space_limit_z[0]-0.2, self.space_limit_z[1]+1.5])
-        ax_3d.set_xlabel("x")
-        ax_3d.set_ylabel("y")
-        ax_3d.set_zlabel("z")
+        # plot obstacles
+        self.plot_linear_cube(ObsList, color='red')
+        # set obstacle legend
+        red_patch = patches.Patch(color='red', label='Obstacles')
+        self.ax_3d.add_artist(plt.legend(handles=[red_patch]))
+
+        self.ax_3d.set_xlim([self.space_limit_x[0]-1.2, self.space_limit_x[1]+1.2])
+        self.ax_3d.set_ylim([self.space_limit_y[0]-1.2, self.space_limit_y[1]+1.2])
+        self.ax_3d.set_zlim([self.space_limit_z[0]-0.2, self.space_limit_z[1]+1.5])
+        self.ax_3d.set_xlabel("x")
+        self.ax_3d.set_ylabel("y")
+        self.ax_3d.set_zlabel("z")
         plt.legend(loc="upper left")
         plt.title('Waypoints in 3D. Close this window to continue.', fontweight ='bold')
         plt.show()
@@ -199,3 +227,32 @@ class InputWaypoints(object):
             time_list_all.append(time_segment+time_list_all[i-1])
 
         return time_list_all
+
+
+    def plot_linear_cube(self, ObsList: list, color='red'):
+        """
+        Plot obstacles in 3D space.
+        """
+
+        # plot obstacles
+        num_obs = len(ObsList)
+        if num_obs > 0.5:
+            for i in range(0, num_obs):
+                x = ObsList[i].center[0] - 0.5 * ObsList[i].length
+                y = ObsList[i].center[1] - 0.5 * ObsList[i].width
+                z = ObsList[i].center[2] - 0.5 * ObsList[i].height
+
+                dx = ObsList[i].length
+                dy = ObsList[i].width
+                dz = ObsList[i].height
+
+                xx = [x, x, x+dx, x+dx, x]
+                yy = [y, y+dy, y+dy, y, y]
+                kwargs = {'alpha': 1, 'color': color}
+                self.ax_3d.plot3D(xx, yy, [z]*5, **kwargs)
+                self.ax_3d.plot3D(xx, yy, [z+dz]*5, **kwargs)
+                self.ax_3d.plot3D([x, x], [y, y], [z, z+dz], **kwargs)
+                self.ax_3d.plot3D([x, x], [y+dy, y+dy], [z, z+dz], **kwargs)
+                self.ax_3d.plot3D([x+dx, x+dx], [y+dy, y+dy], [z, z+dz], **kwargs)
+                self.ax_3d.plot3D([x+dx, x+dx], [y, y], [z, z+dz], **kwargs)
+
