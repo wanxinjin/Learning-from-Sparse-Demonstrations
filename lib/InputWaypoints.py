@@ -49,6 +49,7 @@ class InputWaypoints(object):
         Run this method to obtain human inputs as sparse demonstrations.
         """
 
+        #---------------------------------------------------------------#
         # for the top-down view
         self.fig_top_down = plt.figure()
         self.ax_top_down = self.fig_top_down.add_subplot(1, 1, 1)
@@ -96,7 +97,7 @@ class InputWaypoints(object):
             self.ax_top_down.scatter(waypoints_top_down[i][0], waypoints_top_down[i][1], c='C0')
         plt.draw()
 
-
+        #---------------------------------------------------------------#
         # for the right-left view
         self.fig_right_left = plt.figure()
         self.ax_right_left = self.fig_right_left.add_subplot(1, 1, 1)
@@ -164,7 +165,7 @@ class InputWaypoints(object):
             waypoints_3d_plot[1].append(waypoints_output[i][1])
             waypoints_3d_plot[2].append(waypoints_output[i][2])
 
-
+        #---------------------------------------------------------------#
         # for the 3D plot
         self.fig_3d = plt.figure()
         self.ax_3d = self.fig_3d.add_subplot(111, projection='3d')

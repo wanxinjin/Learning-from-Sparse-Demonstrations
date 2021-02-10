@@ -50,9 +50,28 @@ Below is the procedure of how to apply the codes to train your robot to learn fr
 The quickest way to hand on the codes is to check and run the examples under the folder `./Examples/` .
 
 
+Run the algorithm with pre-defined waypoints:
 ```
 $ cd <ROOT_DIRECTORY>
 $ python3 Examples/quad_example.py
+```
+
+Run the algorithm with human inputs:
+```
+$ cd <ROOT_DIRECTORY>
+$ python3 Examples/quad_example_human_input.py
+```
+
+To obtain human input via matplotlib ginput():
+```
+$ cd <ROOT_DIRECTORY>
+$ python3 test/test_input.py
+```
+
+To obtain human input via a GUI with PyQt5:
+```
+$ cd <ROOT_DIRECTORY>
+$ python3 test/test_gui.py
 ```
 
 
