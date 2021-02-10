@@ -5,6 +5,7 @@ import time
 sys.path.append(os.getcwd()+'/CPDP')
 sys.path.append(os.getcwd()+'/JinEnv')
 sys.path.append(os.getcwd()+'/lib')
+import math
 import CPDP
 import JinEnv
 from casadi import *
@@ -81,6 +82,7 @@ class QuadAlgorithm(object):
         Run the algorithm
         """
 
+        print("Algorithm is running now.")
         # set the goal states
         self.settings(QuadDesiredStates)
 
@@ -125,25 +127,20 @@ class QuadAlgorithm(object):
         # Below is to obtain the final uav trajectory based on the learned objective function (under un-warping settings)
         
         # note this is the uav actual horizon after warping (T is before warping)
-        horizon = current_parameter[0]*T
+        # floor the horizon with 2 decimal
+        horizon = math.floor(current_parameter[0]*T*100) / 100.0
         # the learned cost function, but set the time-warping function as unit (un-warping)
         current_parameter[0] = 1
         _, opt_sol = self.oc.cocSolver(ini_state, horizon, current_parameter)
         
         # generate the time inquiry grid with N is the point number
         # time_steps = np.linspace(0, horizon, num=100)
-        time_steps = np.linspace(0, round(horizon,2), num=round(horizon/0.01)+1)
-        print("time_steps")
-        print(time_steps)
+        time_steps = np.linspace(0, math.floor(horizon*100)/100.0, num=int(math.floor(horizon*100)+1))
 
         opt_traj = opt_sol(time_steps)
         
         # state trajectory ----- N*[r,v,q,w]
         opt_state_traj = opt_traj[:, :self.oc.n_state]
-
-        print("opt_state_traj")
-        print(opt_state_traj)
-
         # control trajectory ---- N*[t1,t2,t3,t4]
         opt_control_traj = opt_traj[:, self.oc.n_state : self.oc.n_state + self.oc.n_control]
 
@@ -166,15 +163,13 @@ class QuadAlgorithm(object):
             name_prefix_mat = os.getcwd() + '/data/uav_results_random_' + time_prefix
             sio.savemat(name_prefix_mat + '.mat', {'results': save_data})
 
-            print("horizon")
-            print(horizon)
-            print("opt_state_traj")
-            print(opt_state_traj)
-
             # save the trajectory as csv files
             name_prefix_csv = os.getcwd() + '/trajectories/' + time_prefix + '.csv'
-            # csc file has the same column and row of numpy_array
-            # np.savetxt(name_prefix_csv, numpy_array, delimiter=",")
+            # convert 2d list to 2d numpy array, and slice the first 6 rows
+            # num_points by 13 states, but I need states by num_points
+            opt_state_traj_numpy = np.array(opt_state_traj)
+            csv_np_array = np.concatenate(( np.array([time_steps]), np.transpose(opt_state_traj_numpy[:,0:6]) ) , axis=0)
+            np.savetxt(name_prefix_csv, csv_np_array, delimiter=",")
             #self.env.play_animation(self.QuadPara.l, opt_state_traj, name_prefix, save_option=True)
 
 

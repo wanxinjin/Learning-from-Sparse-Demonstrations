@@ -25,7 +25,7 @@ if __name__ == "__main__":
     config_data = json.load(json_file)
 
     # generate random obstacles
-    num_obs = 8 # number of obstacles
+    num_obs = 10 # number of obstacles
     size_list=[0.2, 0.3, 0.4] # size lenth, width, height in x,y,z axis
     ObsList = generate_random_obs(num_obs, size_list, config_data)
 
@@ -35,14 +35,14 @@ if __name__ == "__main__":
     # the learning rate
     learning_rate = 5e-3
     # the maximum iteration steps
-    iter_num = 3
+    iter_num = 100
     # number of grids for nonlinear programming solver
     n_grid = 25
 
     # define the initial condition
     R = np.array([[1,0,0],[0,1,0],[0,0,1]]) # rotation matrix in numpy 2D array
     QuadInitialCondition = QuadStates()
-    QuadInitialCondition.position = [0, 0, 0.6]
+    QuadInitialCondition.position = [-2.0, -1.0, 0.6]
     QuadInitialCondition.velocity = [0, 0, 0]
     QuadInitialCondition.attitude_quaternion = transforms3d.quaternions.mat2quat(R).tolist()
     QuadInitialCondition.angular_velocity = [0, 0, 0]
@@ -50,7 +50,7 @@ if __name__ == "__main__":
     # define the desired goal
     R = np.array([[1,0,0],[0,1,0],[0,0,1]]) # rotation matrix in numpy 2D array
     QuadDesiredStates = QuadStates()
-    QuadDesiredStates.position = [3, 3, 1.5]
+    QuadDesiredStates.position = [2.5, 1.0, 1.5]
     QuadDesiredStates.velocity = [0, 0, 0]
     QuadDesiredStates.attitude_quaternion = transforms3d.quaternions.mat2quat(R).tolist()
     QuadDesiredStates.angular_velocity = [0, 0, 0]
@@ -65,10 +65,3 @@ if __name__ == "__main__":
 
     # solve it
     Solver.run(QuadInitialCondition, QuadDesiredStates, SparseInput, print_flag=True, save_flag=True)
-
-    print("waypoints")
-    print(SparseInput.waypoints)
-    print("time_list")
-    print(SparseInput.time_list)
-    print("time_horizon")
-    print(SparseInput.time_horizon)
