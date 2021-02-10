@@ -6,15 +6,21 @@ sys.path.append(os.getcwd()+'/CPDP')
 sys.path.append(os.getcwd()+'/JinEnv')
 sys.path.append(os.getcwd()+'/lib')
 import math
+import json
 import CPDP
 import JinEnv
 from casadi import *
 import scipy.io as sio
 import numpy as np
+import matplotlib.pyplot as plt
+import matplotlib.patches as patches
+from mpl_toolkits.mplot3d import Axes3D
 from dataclasses import dataclass, field
 from QuadPara import QuadPara
 from QuadStates import QuadStates
 from DemoSparse import DemoSparse
+from ObsInfo import ObsInfo
+from generate_random_obs import generate_random_obs
 
 
 class QuadAlgorithm(object):
@@ -23,25 +29,30 @@ class QuadAlgorithm(object):
     n_grid: int # the number of grid for nonlinear programming
     QuadPara: QuadPara # the dataclass QuadPara including the quadrotor parameters
 
-    # # the loss function and interface function
-    # interface_pos_fn
-    # interface_ori_fn
-    # diff_interface_pos_fn
-    # diff_interface_ori_fn
 
-    # env # JinEnv
-    # oc # the optimal controller
-
-
-    def __init__(self, QuadParaInput: QuadPara, learning_rate: float, iter_num: int, n_grid: int):
+    def __init__(self, config_data, QuadParaInput: QuadPara, learning_rate: float, iter_num: int, n_grid: int):
         """
         constructor
+
+        config_data:
+            config_file_name = "config.json"
+            json_file = open(config_file_name)
+            config_data = json.load(json_file)
         """
 
         self.QuadPara = QuadParaInput
         self.learning_rate = learning_rate
         self.iter_num = iter_num
         self.n_grid = n_grid
+
+        # the lab space limit [meter] in x-axis [x_min, x_max]
+        self.space_limit_x = config_data["LAB_SPACE_LIMIT"]["LIMIT_X"]
+        # the lab space limit [meter] in y-axis [y_min, y_max]
+        self.space_limit_y = config_data["LAB_SPACE_LIMIT"]["LIMIT_Y"]
+        # the lab space limit [meter] in z-axis [z_min, z_max]
+        self.space_limit_z = config_data["LAB_SPACE_LIMIT"]["LIMIT_Z"]
+        # the average speed for the quadrotor [m/s]
+        self.quad_average_speed = float(config_data["QUAD_AVERAGE_SPEED"])
 
 
     def settings(self, QuadDesiredStates: QuadStates):
@@ -77,12 +88,15 @@ class QuadAlgorithm(object):
         self.diff_interface_ori_fn = Function('diff_interface', [self.oc.state], [jacobian(self.oc.state[6:10], self.oc.state)])
 
 
-    def run(self, QuadInitialCondition: QuadStates, QuadDesiredStates: QuadStates, SparseInput: DemoSparse, print_flag: bool, save_flag: bool):
+    def run(self, QuadInitialCondition: QuadStates, QuadDesiredStates: QuadStates, SparseInput: DemoSparse, ObsList: list, print_flag: bool, save_flag: bool):
         """
         Run the algorithm
         """
 
         print("Algorithm is running now.")
+        # set the obstacles for plotting
+        self.ObsList = ObsList
+
         # set the goal states
         self.settings(QuadDesiredStates)
 
@@ -135,7 +149,8 @@ class QuadAlgorithm(object):
         
         # generate the time inquiry grid with N is the point number
         # time_steps = np.linspace(0, horizon, num=100)
-        time_steps = np.linspace(0, math.floor(horizon*100)/100.0, num=int(math.floor(horizon*100)+1))
+        # time_steps = np.linspace(0, math.floor(horizon*100)/100.0, num=int(math.floor(horizon*100)+1))
+        time_steps = np.linspace(0, horizon, num=int(horizon/0.01 +1))
 
         opt_traj = opt_sol(time_steps)
         
@@ -170,6 +185,10 @@ class QuadAlgorithm(object):
             opt_state_traj_numpy = np.array(opt_state_traj)
             csv_np_array = np.concatenate(( np.array([time_steps]), np.transpose(opt_state_traj_numpy[:,0:6]) ) , axis=0)
             np.savetxt(name_prefix_csv, csv_np_array, delimiter=",")
+
+            # plot trajectory in 3D space
+            self.plot_opt_trajectory(opt_state_traj_numpy, QuadInitialCondition, QuadDesiredStates, SparseInput)
+
             #self.env.play_animation(self.QuadPara.l, opt_state_traj, name_prefix, save_option=True)
 
 
@@ -224,3 +243,66 @@ class QuadAlgorithm(object):
 
         return loss, diff_loss
 
+
+    def plot_opt_trajectory(self, opt_state_traj_numpy, QuadInitialCondition: QuadStates, QuadDesiredStates: QuadStates, SparseInput: DemoSparse):
+        """
+        Plot trajectory and waypoints in 3D space with obstacles.
+
+        opt_state_traj_numpy is a 2D numpy array, each row is all the states at the same time-stamp.
+        """
+
+        self.fig_3d = plt.figure()
+        self.ax_3d = self.fig_3d.add_subplot(111, projection='3d')
+
+        # plot waypoints
+        self.ax_3d.plot3D(opt_state_traj_numpy[:,0].tolist(), opt_state_traj_numpy[:,1].tolist(), opt_state_traj_numpy[:,2].tolist(), 'blue', label='optimal trajectory')
+        for i in range(0, len(SparseInput.waypoints)):
+            self.ax_3d.scatter(SparseInput.waypoints[i][0], SparseInput.waypoints[i][1], SparseInput.waypoints[i][2], c='C0')
+
+        # plot start and goal
+        self.ax_3d.scatter(QuadInitialCondition.position[0], QuadInitialCondition.position[1], QuadInitialCondition.position[2], label='start', color='green')
+        self.ax_3d.scatter(QuadDesiredStates.position[0], QuadDesiredStates.position[1], QuadDesiredStates.position[2], label='goal', color='violet')
+
+        # plot obstacles
+        self.plot_linear_cube()
+        # set obstacle legend
+        red_patch = patches.Patch(color='red', label='Obstacles')
+        self.ax_3d.add_artist(plt.legend(handles=[red_patch]))
+
+        self.ax_3d.set_xlim([self.space_limit_x[0]-1.2, self.space_limit_x[1]+1.2])
+        self.ax_3d.set_ylim([self.space_limit_y[0]-1.2, self.space_limit_y[1]+1.2])
+        self.ax_3d.set_zlim([self.space_limit_z[0]-0.2, self.space_limit_z[1]+1.5])
+        self.ax_3d.set_xlabel("x")
+        self.ax_3d.set_ylabel("y")
+        self.ax_3d.set_zlabel("z")
+        plt.legend(loc="upper left")
+        plt.title('Trajectory in 3D space.', fontweight ='bold')
+        plt.show()
+
+    
+    def plot_linear_cube(self, color='red'):
+        """
+        Plot obstacles in 3D space.
+        """
+
+        # plot obstacles
+        num_obs = len(self.ObsList)
+        if num_obs > 0.5:
+            for i in range(0, num_obs):
+                x = self.ObsList[i].center[0] - 0.5 * self.ObsList[i].length
+                y = self.ObsList[i].center[1] - 0.5 * self.ObsList[i].width
+                z = self.ObsList[i].center[2] - 0.5 * self.ObsList[i].height
+
+                dx = self.ObsList[i].length
+                dy = self.ObsList[i].width
+                dz = self.ObsList[i].height
+
+                xx = [x, x, x+dx, x+dx, x]
+                yy = [y, y+dy, y+dy, y, y]
+                kwargs = {'alpha': 1, 'color': color}
+                self.ax_3d.plot3D(xx, yy, [z]*5, **kwargs)
+                self.ax_3d.plot3D(xx, yy, [z+dz]*5, **kwargs)
+                self.ax_3d.plot3D([x, x], [y, y], [z, z+dz], **kwargs)
+                self.ax_3d.plot3D([x, x], [y+dy, y+dy], [z, z+dz], **kwargs)
+                self.ax_3d.plot3D([x+dx, x+dx], [y+dy, y+dy], [z, z+dz], **kwargs)
+                self.ax_3d.plot3D([x+dx, x+dx], [y, y], [z, z+dz], **kwargs)

@@ -14,6 +14,7 @@ from QuadStates import QuadStates
 from DemoSparse import DemoSparse
 from QuadAlgorithm import QuadAlgorithm
 from InputWaypoints import InputWaypoints
+from ObsInfo import ObsInfo
 from generate_random_obs import generate_random_obs
 
 
@@ -61,7 +62,7 @@ if __name__ == "__main__":
     SparseInput= Input.run(QuadInitialCondition, QuadDesiredStates, ObsList)
 
     # create the quadrotor algorithm solver
-    Solver = QuadAlgorithm(QuadParaInput, learning_rate, iter_num, n_grid)
+    Solver = QuadAlgorithm(config_data, QuadParaInput, learning_rate, iter_num, n_grid)
 
     # solve it
-    Solver.run(QuadInitialCondition, QuadDesiredStates, SparseInput, print_flag=True, save_flag=True)
+    Solver.run(QuadInitialCondition, QuadDesiredStates, SparseInput, ObsList, print_flag=True, save_flag=True)

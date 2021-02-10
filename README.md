@@ -7,7 +7,7 @@ Wanxin Jin, Todd D. Murphey, Dana Kulić, Neta Ezer, Shaoshuai Mou. Please find 
 * Demos: https://wanxinjin.github.io/posts/lfsd for video demos.
 
 This repo has been tested with:
-* Python 3.9.1, Ubuntu 20.04.1 LTS
+* Python 3.8.5, Ubuntu 20.04.2 LTS
 
 ## Project Structure
 The current version of the project consists of three folders:

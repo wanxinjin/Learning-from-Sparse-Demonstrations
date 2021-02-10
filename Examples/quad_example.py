@@ -5,6 +5,7 @@ import time
 sys.path.append(os.getcwd()+'/CPDP')
 sys.path.append(os.getcwd()+'/JinEnv')
 sys.path.append(os.getcwd()+'/lib')
+import json
 import numpy as np
 import transforms3d
 from dataclasses import dataclass, field
@@ -15,6 +16,12 @@ from QuadAlgorithm import QuadAlgorithm
 
 
 if __name__ == "__main__":
+    # a json configuration file
+    config_file_name = "config.json"
+    # Read the configuration from the json file
+    json_file = open(config_file_name)
+    config_data = json.load(json_file)
+
     # define the quadrotor dynamics parameters
     QuadParaInput = QuadPara(inertial_list=[1.0, 1.0, 1.0], mass=1.0, l=1.0, c=0.02)
 
@@ -53,8 +60,8 @@ if __name__ == "__main__":
     QuadDesiredStates.angular_velocity = [0, 0, 0]
 
     # create the quadrotor algorithm solver
-    Solver = QuadAlgorithm(QuadParaInput, learning_rate, iter_num, n_grid)
+    Solver = QuadAlgorithm(config_data, QuadParaInput, learning_rate, iter_num, n_grid)
 
     # solve it
-    Solver.run(QuadInitialCondition, QuadDesiredStates, SparseInput, print_flag=True, save_flag=True)
+    Solver.run(QuadInitialCondition, QuadDesiredStates, SparseInput, ObsList=[], print_flag=True, save_flag=True)
 

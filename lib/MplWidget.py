@@ -246,7 +246,8 @@ class MplWidget(QtWidgets.QWidget):
             self.canvas.draw()
 
         else:
-            raise Exception("Unknown axes!")
+            #raise Exception("Unknown axes!")
+            pass
 
 
     def on_move(self, event):
