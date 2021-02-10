@@ -166,6 +166,11 @@ class QuadAlgorithm(object):
             name_prefix_mat = os.getcwd() + '/data/uav_results_random_' + time_prefix
             sio.savemat(name_prefix_mat + '.mat', {'results': save_data})
 
+            print("horizon")
+            print(horizon)
+            print("opt_state_traj")
+            print(opt_state_traj)
+
             # save the trajectory as csv files
             name_prefix_csv = os.getcwd() + '/trajectories/' + time_prefix + '.csv'
             # csc file has the same column and row of numpy_array

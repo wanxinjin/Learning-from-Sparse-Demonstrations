@@ -14,6 +14,7 @@ from QuadStates import QuadStates
 from DemoSparse import DemoSparse
 from QuadAlgorithm import QuadAlgorithm
 from InputWaypoints import InputWaypoints
+from generate_random_obs import generate_random_obs
 
 
 if __name__ == "__main__":
