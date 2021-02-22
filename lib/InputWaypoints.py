@@ -77,7 +77,7 @@ class InputWaypoints(object):
             for i in range(0, num_obs):
                 # in XOY plane, width means length in ObsInfo, height means width in ObsInfo
                 rect = patches.Rectangle([ ObsList[i].center[0]-0.5*ObsList[i].length, ObsList[i].center[1]-0.5*ObsList[i].width ], \
-                    width=ObsList[i].length, height=ObsList[i].width, linewidth=1, edgecolor='r', facecolor='r')
+                    width=ObsList[i].length, height=ObsList[i].width, linewidth=1, edgecolor='r', facecolor='r', alpha=0.5)
                 # Add the patch to the Axes
                 self.ax_top_down.add_patch(rect)
 
@@ -127,7 +127,7 @@ class InputWaypoints(object):
             for i in range(0, num_obs):
                 # in XOZ plane, width means length in ObsInfo, height means height in ObsInfo
                 rect = patches.Rectangle([ ObsList[i].center[0]-0.5*ObsList[i].length, ObsList[i].center[2]-0.5*ObsList[i].height ], \
-                    width=ObsList[i].length, height=ObsList[i].height, linewidth=1, edgecolor='r', facecolor='r')
+                    width=ObsList[i].length, height=ObsList[i].height, linewidth=1, edgecolor='r', facecolor='r', alpha=0.5)
                 # Add the patch to the Axes
                 self.ax_right_left.add_patch(rect)
         
@@ -188,13 +188,8 @@ class InputWaypoints(object):
         # set obstacle legend
         red_patch = patches.Patch(color='red', label='Obstacles')
         self.ax_3d.add_artist(plt.legend(handles=[red_patch]))
-
-        #self.ax_3d.set_xlim([self.space_limit_x[0]-1.2, self.space_limit_x[1]+1.2])
-        #self.ax_3d.set_ylim([self.space_limit_y[0]-1.2, self.space_limit_y[1]+1.2])
-        #self.ax_3d.set_zlim([self.space_limit_z[0]-0.2, self.space_limit_z[1]+1.5])
+        
         self.set_axes_equal_all()
-
-
         self.ax_3d.set_xlabel("x")
         self.ax_3d.set_ylabel("y")
         self.ax_3d.set_zlabel("z")

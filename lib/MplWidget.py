@@ -165,12 +165,7 @@ class MplWidget(QtWidgets.QWidget):
         #---------------------------------------------------------------#
         # settings for 3D plotting
         self.canvas.axes_3D = self.canvas.figure.add_subplot(121, projection='3d')
-        
-        #self.canvas.axes_3D.set_xlim([self.space_limit_x[0]-1.2, self.space_limit_x[1]+1.2])
-        #self.canvas.axes_3D.set_ylim([self.space_limit_y[0]-1.2, self.space_limit_y[1]+1.2])
-        #self.canvas.axes_3D.set_zlim([self.space_limit_z[0]-0.2, self.space_limit_z[1]+1.5])
         self.set_axes_equal_all()
-
 
         self.canvas.axes_3D.set_xlabel("x")
         self.canvas.axes_3D.set_ylabel("y")
@@ -402,3 +397,4 @@ class MplWidget(QtWidgets.QWidget):
         self.canvas.axes_3D.set_xlim3d([x_middle - plot_radius, x_middle + plot_radius])
         self.canvas.axes_3D.set_ylim3d([y_middle - plot_radius, y_middle + plot_radius])
         self.canvas.axes_3D.set_zlim3d([z_middle - plot_radius, z_middle + plot_radius])
+        

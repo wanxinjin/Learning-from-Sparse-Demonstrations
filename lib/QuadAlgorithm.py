@@ -220,7 +220,10 @@ class QuadAlgorithm(object):
             # plot trajectory in 3D space
             self.plot_opt_trajectory(posi_velo_traj_numpy, QuadInitialCondition, QuadDesiredStates, SparseInput)
 
-            #self.env.play_animation(self.QuadPara.l, opt_state_traj, name_prefix, save_option=True)
+            # play animation
+            name_prefix_animation = os.getcwd() + '/trajectories/animation_' + time_prefix
+            space_limits = [self.space_limit_x, self.space_limit_y, self.space_limit_z]
+            self.env.play_animation(self.QuadPara.l, opt_state_traj_numpy, name_prefix_animation, space_limits, save_option=True)
 
 
     def getloss_pos_corrections(self, time_grid, target_waypoints, opt_sol, auxsys_sol):
@@ -300,12 +303,7 @@ class QuadAlgorithm(object):
         red_patch = patches.Patch(color='red', label='Obstacles')
         self.ax_3d.add_artist(plt.legend(handles=[red_patch]))
 
-        #self.ax_3d.set_xlim([self.space_limit_x[0]-1.2, self.space_limit_x[1]+1.2])
-        #self.ax_3d.set_ylim([self.space_limit_y[0]-1.2, self.space_limit_y[1]+1.2])
-        #self.ax_3d.set_zlim([self.space_limit_z[0]-0.2, self.space_limit_z[1]+1.5])
         self.set_axes_equal_all()
-
-
         self.ax_3d.set_xlabel("x")
         self.ax_3d.set_ylabel("y")
         self.ax_3d.set_zlabel("z")

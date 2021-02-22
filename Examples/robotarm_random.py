@@ -4,6 +4,7 @@ import sys
 import time
 sys.path.append(os.getcwd()+'/CPDP')
 sys.path.append(os.getcwd()+'/JinEnv')
+sys.path.append(os.getcwd()+'/lib')
 import CPDP
 import JinEnv
 from casadi import *

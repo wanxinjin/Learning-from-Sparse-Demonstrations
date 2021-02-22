@@ -16,6 +16,8 @@ The current version of the project consists of three folders:
 * **_CPDP_** : a package including an optimal control solver, functionalities for differentiating maximum principle, and functionalities to solve the differential maximum principle.  
 * **_JinEnv_** : an independent package providing various robot environments to simulate on.
 * **_Examples_** : various examples to reproduce the experiments in the paper.
+* **_lib_** : various helper libraries for obtaining human demonstrations via GUI.
+* **_test_** : various test files for testing GUI.
 
 
 ## Dependency Packages
@@ -49,6 +51,8 @@ Below is the procedure of how to apply the codes to train your robot to learn fr
 
 The quickest way to hand on the codes is to check and run the examples under the folder `./Examples/` .
 
+
+There are some parameters for the quadrotor demo, including the 3D space limit and the average speed for estimating the time waypoints.
 
 Run the algorithm with pre-defined waypoints:
 ```

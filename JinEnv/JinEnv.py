@@ -946,10 +946,18 @@ class Quadrotor:
                          self.w_zsq * self.feature_zsq + self.w_z * self.feature_z + \
                          w_thrust * self.cost_thrust
 
-        self.final_cost = 1 * self.cost_goal_r + \
+        #self.final_cost = 1 * self.cost_goal_r + \
+        #                  11 * self.cost_goal_v + \
+        #                  100 * self.cost_goal_q + \
+        #                  10 * self.cost_goal_w
+
+        # tune weights for final cost
+        self.final_cost = 10 * self.cost_goal_r + \
                           11 * self.cost_goal_v + \
                           100 * self.cost_goal_q + \
                           10 * self.cost_goal_w
+
+
         self.cost_auxvar = vcat(parameter)
 
     def get_quadrotor_position(self, wing_len, state_traj):
@@ -968,7 +976,10 @@ class Quadrotor:
             rc = state_traj[t, 0:3]
             # altitude of quaternion
             q = state_traj[t, 6:10]
-            q = q / np.linalg.norm(q)
+
+            # q here is a 1D list, no matter which type state_traj is (numpy 2d array or 2d list)
+            if abs(np.linalg.norm(q)) > 1e-6:
+                q = np.array(q) / np.linalg.norm(q)
 
             # direction cosine matrix from body to inertial
             CIB = np.transpose(self.dir_cosine(q).full())
@@ -988,7 +999,7 @@ class Quadrotor:
 
         return position
 
-    def play_animation(self, wing_len, state_traj, file_name_prefix: str, save_option: bool, state_traj_ref=None, dt=0.1, title='UAV Maneuvering',
+    def play_animation(self, wing_len, state_traj, file_name_prefix: str, space_limits: list, save_option: bool, state_traj_ref=None, dt=0.1, title='UAV Maneuvering',
                        horizon=1, waypoints=None):
 
         # plot
@@ -1004,9 +1015,10 @@ class Quadrotor:
         ax.set_xlabel('X (m)', fontsize=15, labelpad=15)
         ax.set_ylabel('Y (m)', fontsize=15, labelpad=15)
         ax.set_zlabel('Z (m)', fontsize=15, labelpad=15)
-        ax.set_zlim(0, 12)
-        ax.set_ylim(-9, 9)
-        ax.set_xlim(-9, 9)
+        #ax.set_zlim(0, 12)
+        #ax.set_ylim(-9, 9)
+        #ax.set_xlim(-9, 9)
+        self.set_axes_equal_all(ax, space_limits)
         ax.set_title('UAV manuvering', pad=15, fontsize=20)
         time_template = 'time = %.1fs'
         time_text = ax.text2D(0.55, 0.50, "time", transform=ax.transAxes, fontsize=15)
@@ -1081,14 +1093,14 @@ class Quadrotor:
         r2_x, r2_y, r2_z = position[0, 6:9]
         r3_x, r3_y, r3_z = position[0, 9:12]
         r4_x, r4_y, r4_z = position[0, 12:15]
-        line_arm1, = ax.plot([c_x, r1_x], [c_y, r1_y], [c_z, r1_z], linewidth=4, color='blue', marker='o', markersize=4,
-                             markerfacecolor='black')
-        line_arm2, = ax.plot([c_x, r2_x], [c_y, r2_y], [c_z, r2_z], linewidth=4, color='red', marker='o', markersize=4,
-                             markerfacecolor='black')
-        line_arm3, = ax.plot([c_x, r3_x], [c_y, r3_y], [c_z, r3_z], linewidth=4, color='blue', marker='o', markersize=4,
-                             markerfacecolor='black', )
-        line_arm4, = ax.plot([c_x, r4_x], [c_y, r4_y], [c_z, r4_z], linewidth=4, color='red', marker='o', markersize=4,
-                             markerfacecolor='black', )
+        line_arm1, = ax.plot(np.array([c_x, r1_x]), np.array([c_y, r1_y]), np.array([c_z, r1_z]),
+            linewidth=4, color='blue', marker='o', markersize=4, markerfacecolor='black')
+        line_arm2, = ax.plot(np.array([c_x, r2_x]), np.array([c_y, r2_y]), np.array([c_z, r2_z]),
+            linewidth=4, color='red', marker='o', markersize=4, markerfacecolor='black')
+        line_arm3, = ax.plot(np.array([c_x, r3_x]), np.array([c_y, r3_y]), np.array([c_z, r3_z]),
+            linewidth=4, color='blue', marker='o', markersize=4, markerfacecolor='black')
+        line_arm4, = ax.plot(np.array([c_x, r4_x]), np.array([c_y, r4_y]), np.array([c_z, r4_z]),
+            linewidth=4, color='red', marker='o', markersize=4, markerfacecolor='black')
 
         line_traj_ref, = ax.plot(position_ref[:1, 0], position_ref[:1, 1], position_ref[:1, 2], color='gray', alpha=0.5)
         c_x_ref, c_y_ref, c_z_ref = position_ref[0, 0:3]
@@ -1096,14 +1108,14 @@ class Quadrotor:
         r2_x_ref, r2_y_ref, r2_z_ref = position_ref[0, 6:9]
         r3_x_ref, r3_y_ref, r3_z_ref = position_ref[0, 9:12]
         r4_x_ref, r4_y_ref, r4_z_ref = position_ref[0, 12:15]
-        line_arm1_ref, = ax.plot([c_x_ref, r1_x_ref], [c_y_ref, r1_y_ref], [c_z_ref, r1_z_ref], linewidth=2,
-                                 color='gray', marker='o', markersize=3, alpha=0.7)
-        line_arm2_ref, = ax.plot([c_x_ref, r2_x_ref], [c_y_ref, r2_y_ref], [c_z_ref, r2_z_ref], linewidth=2,
-                                 color='gray', marker='o', markersize=3, alpha=0.7)
-        line_arm3_ref, = ax.plot([c_x_ref, r3_x_ref], [c_y_ref, r3_y_ref], [c_z_ref, r3_z_ref], linewidth=2,
-                                 color='gray', marker='o', markersize=3, alpha=0.7)
-        line_arm4_ref, = ax.plot([c_x_ref, r4_x_ref], [c_y_ref, r4_y_ref], [c_z_ref, r4_z_ref], linewidth=2,
-                                 color='gray', marker='o', markersize=3, alpha=0.7)
+        line_arm1_ref, = ax.plot(np.array([c_x_ref, r1_x_ref]), np.array([c_y_ref, r1_y_ref]), np.array([c_z_ref, r1_z_ref]),
+            linewidth=2, color='gray', marker='o', markersize=3, alpha=0.7)
+        line_arm2_ref, = ax.plot(np.array([c_x_ref, r2_x_ref]), np.array([c_y_ref, r2_y_ref]), np.array([c_z_ref, r2_z_ref]),
+            linewidth=2, color='gray', marker='o', markersize=3, alpha=0.7)
+        line_arm3_ref, = ax.plot(np.array([c_x_ref, r3_x_ref]), np.array([c_y_ref, r3_y_ref]), np.array([c_z_ref, r3_z_ref]),
+            linewidth=2, color='gray', marker='o', markersize=3, alpha=0.7)
+        line_arm4_ref, = ax.plot(np.array([c_x_ref, r4_x_ref]), np.array([c_y_ref, r4_y_ref]), np.array([c_z_ref, r4_z_ref]),
+            linewidth=2, color='gray', marker='o', markersize=3, alpha=0.7)
 
         # customize
         if state_traj_ref is not None:
@@ -1126,16 +1138,16 @@ class Quadrotor:
             r3_x, r3_y, r3_z = position[num, 9:12]
             r4_x, r4_y, r4_z = position[num, 12:15]
 
-            line_arm1.set_data([c_x, r1_x], [c_y, r1_y])
+            line_arm1.set_data(np.array([c_x, r1_x]), np.array([c_y, r1_y]))
             line_arm1.set_3d_properties([c_z, r1_z])
 
-            line_arm2.set_data([c_x, r2_x], [c_y, r2_y])
+            line_arm2.set_data(np.array([c_x, r2_x]), np.array([c_y, r2_y]))
             line_arm2.set_3d_properties([c_z, r2_z])
 
-            line_arm3.set_data([c_x, r3_x], [c_y, r3_y])
+            line_arm3.set_data(np.array([c_x, r3_x]), np.array([c_y, r3_y]))
             line_arm3.set_3d_properties([c_z, r3_z])
 
-            line_arm4.set_data([c_x, r4_x], [c_y, r4_y])
+            line_arm4.set_data(np.array([c_x, r4_x]), np.array([c_y, r4_y]))
             line_arm4.set_3d_properties([c_z, r4_z])
 
             # trajectory ref
@@ -1150,16 +1162,16 @@ class Quadrotor:
             r3_x_ref, r3_y_ref, r3_z_ref = position_ref[num, 9:12]
             r4_x_ref, r4_y_ref, r4_z_ref = position_ref[num, 12:15]
 
-            line_arm1_ref.set_data([c_x_ref, r1_x_ref], [c_y_ref, r1_y_ref])
+            line_arm1_ref.set_data(np.array([c_x_ref, r1_x_ref]), np.array([c_y_ref, r1_y_ref]))
             line_arm1_ref.set_3d_properties([c_z_ref, r1_z_ref])
 
-            line_arm2_ref.set_data([c_x_ref, r2_x_ref], [c_y_ref, r2_y_ref])
+            line_arm2_ref.set_data(np.array([c_x_ref, r2_x_ref]), np.array([c_y_ref, r2_y_ref]))
             line_arm2_ref.set_3d_properties([c_z_ref, r2_z_ref])
 
-            line_arm3_ref.set_data([c_x_ref, r3_x_ref], [c_y_ref, r3_y_ref])
+            line_arm3_ref.set_data(np.array([c_x_ref, r3_x_ref]), np.array([c_y_ref, r3_y_ref]))
             line_arm3_ref.set_3d_properties([c_z_ref, r3_z_ref])
 
-            line_arm4_ref.set_data([c_x_ref, r4_x_ref], [c_y_ref, r4_y_ref])
+            line_arm4_ref.set_data(np.array([c_x_ref, r4_x_ref]), np.array([c_y_ref, r4_y_ref]))
             line_arm4_ref.set_3d_properties([c_z_ref, r4_z_ref])
 
             return line_traj, line_arm1, line_arm2, line_arm3, line_arm4, \
@@ -1170,7 +1182,7 @@ class Quadrotor:
         if save_option == True:
             Writer = animation.writers['ffmpeg']
             writer = Writer(fps=10, metadata=dict(artist='Me'), bitrate=-1)
-            ani.save(file_name_prefix + '.mp4', writer=writer, dpi=300)
+            ani.save(file_name_prefix + '.gif', writer=writer, dpi=300)
             print('save_success')
 
         plt.show()
@@ -1206,6 +1218,38 @@ class Quadrotor:
                        p[0] * q[2] - p[1] * q[3] + p[2] * q[0] + p[3] * q[1],
                        p[0] * q[3] + p[1] * q[2] - p[2] * q[1] + p[3] * q[0]
                        )
+
+
+    def set_axes_equal_all(self, ax, space_limits: list):
+        '''
+        Make axes of 3D plot have equal scale so that spheres appear as spheres,
+        cubes as cubes, etc..  This is one possible solution to Matplotlib's
+        ax.set_aspect('equal') and ax.axis('equal') not working for 3D.
+        Reference: https://stackoverflow.com/questions/13685386/matplotlib-equal-unit-length-with-equal-aspect-ratio-z-axis-is-not-equal-to
+
+        Input
+        ax: a matplotlib axis, e.g., as output from plt.gca().
+        '''
+
+        x_limits = space_limits[0]
+        y_limits = space_limits[1]
+        z_limits = space_limits[2]
+
+        x_range = abs(x_limits[1] - x_limits[0])
+        x_middle = np.mean(x_limits)
+        y_range = abs(y_limits[1] - y_limits[0])
+        y_middle = np.mean(y_limits)
+        z_range = abs(z_limits[1] - z_limits[0])
+        z_middle = np.mean(z_limits)
+
+        # The plot bounding box is a sphere in the sense of the infinity
+        # norm, hence I call half the max range the plot radius.
+        plot_radius = 0.5*max([x_range, y_range, z_range])
+
+        ax.set_xlim3d([x_middle - plot_radius, x_middle + plot_radius])
+        ax.set_ylim3d([y_middle - plot_radius, y_middle + plot_radius])
+        ax.set_zlim3d([z_middle - plot_radius, z_middle + plot_radius])
+
 
 
 # Rocket environment
