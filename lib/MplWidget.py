@@ -165,9 +165,13 @@ class MplWidget(QtWidgets.QWidget):
         #---------------------------------------------------------------#
         # settings for 3D plotting
         self.canvas.axes_3D = self.canvas.figure.add_subplot(121, projection='3d')
-        self.canvas.axes_3D.set_xlim([self.space_limit_x[0]-1.2, self.space_limit_x[1]+1.2])
-        self.canvas.axes_3D.set_ylim([self.space_limit_y[0]-1.2, self.space_limit_y[1]+1.2])
-        self.canvas.axes_3D.set_zlim([self.space_limit_z[0]-0.2, self.space_limit_z[1]+1.5])
+        
+        #self.canvas.axes_3D.set_xlim([self.space_limit_x[0]-1.2, self.space_limit_x[1]+1.2])
+        #self.canvas.axes_3D.set_ylim([self.space_limit_y[0]-1.2, self.space_limit_y[1]+1.2])
+        #self.canvas.axes_3D.set_zlim([self.space_limit_z[0]-0.2, self.space_limit_z[1]+1.5])
+        self.set_axes_equal_all()
+
+
         self.canvas.axes_3D.set_xlabel("x")
         self.canvas.axes_3D.set_ylabel("y")
         self.canvas.axes_3D.set_zlabel("z")
@@ -370,3 +374,31 @@ class MplWidget(QtWidgets.QWidget):
                 self.canvas.axes_3D.plot3D([x+dx, x+dx], [y+dy, y+dy], [z, z+dz], **kwargs)
                 self.canvas.axes_3D.plot3D([x+dx, x+dx], [y, y], [z, z+dz], **kwargs)
                 self.canvas.draw()
+
+
+    def set_axes_equal_all(self):
+        '''
+        Make axes of 3D plot have equal scale so that spheres appear as spheres,
+        cubes as cubes, etc..  This is one possible solution to Matplotlib's
+        ax.set_aspect('equal') and ax.axis('equal') not working for 3D.
+        Reference: https://stackoverflow.com/questions/13685386/matplotlib-equal-unit-length-with-equal-aspect-ratio-z-axis-is-not-equal-to
+        '''
+
+        x_limits = [self.space_limit_x[0], self.space_limit_x[1]]
+        y_limits = [self.space_limit_y[0], self.space_limit_y[1]]
+        z_limits = [self.space_limit_z[0], self.space_limit_z[1]]
+
+        x_range = abs(x_limits[1] - x_limits[0])
+        x_middle = np.mean(x_limits)
+        y_range = abs(y_limits[1] - y_limits[0])
+        y_middle = np.mean(y_limits)
+        z_range = abs(z_limits[1] - z_limits[0])
+        z_middle = np.mean(z_limits)
+
+        # The plot bounding box is a sphere in the sense of the infinity
+        # norm, hence I call half the max range the plot radius.
+        plot_radius = 0.5*max([x_range, y_range, z_range])
+
+        self.canvas.axes_3D.set_xlim3d([x_middle - plot_radius, x_middle + plot_radius])
+        self.canvas.axes_3D.set_ylim3d([y_middle - plot_radius, y_middle + plot_radius])
+        self.canvas.axes_3D.set_zlim3d([z_middle - plot_radius, z_middle + plot_radius])

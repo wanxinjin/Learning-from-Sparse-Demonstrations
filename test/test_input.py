@@ -25,7 +25,7 @@ if __name__ == "__main__":
     config_data = json.load(json_file)
 
     # generate random obstacles
-    num_obs = 8 # number of obstacles
+    num_obs = 30 # number of obstacles
     size_list = [0.2, 0.3, 0.4] # size lenth, width, height in x,y,z axis
     ObsList = generate_random_obs(num_obs, size_list, config_data)
 
