@@ -112,6 +112,10 @@ class QuadAlgorithm(object):
         taus = np.array(SparseInput.time_list)
         waypoints = np.array(SparseInput.waypoints)
 
+
+        # for debugging
+        T = 1.0
+        taus = taus / SparseInput.time_horizon
         print("T")
         print(T)
         print("taus")
@@ -150,7 +154,13 @@ class QuadAlgorithm(object):
         
         # note this is the uav actual horizon after warping (T is before warping)
         # floor the horizon with 2 decimal
-        horizon = math.floor(current_parameter[0]*T*100) / 100.0
+
+
+        # horizon = math.floor(current_parameter[0]*T*100) / 100.0
+        # debugging
+        horizon = T
+
+
         # the learned cost function, but set the time-warping function as unit (un-warping)
 
         print("beta")
@@ -159,13 +169,13 @@ class QuadAlgorithm(object):
         print(horizon)
 
 
-        current_parameter[0] = 1
+        # current_parameter[0] = 1
 
 
         _, opt_sol = self.oc.cocSolver(ini_state, horizon, current_parameter)
         
         # generate the time inquiry grid with N is the point number
-        time_steps = np.linspace(0, horizon, num=100)
+        time_steps = np.linspace(0, horizon, num=100+1)
         # time_steps = np.linspace(0, horizon, num=int(horizon/0.01 +1))
 
         opt_traj = opt_sol(time_steps)
@@ -206,11 +216,6 @@ class QuadAlgorithm(object):
 
             print("time_steps")
             print(np.array([time_steps]))
-            print("position")
-            print(posi_velo_traj_numpy)
-            print(np.shape(posi_velo_traj_numpy))
-
-
 
             # plot trajectory in 3D space
             self.plot_opt_trajectory(posi_velo_traj_numpy, QuadInitialCondition, QuadDesiredStates, SparseInput)
