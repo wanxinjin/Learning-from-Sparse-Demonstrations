@@ -36,7 +36,7 @@ if __name__ == "__main__":
     # the learning rate
     learning_rate = 5e-3
     # the maximum iteration steps
-    iter_num = 100
+    iter_num = 10
     # number of grids for nonlinear programming solver
     n_grid = 25
 

@@ -112,6 +112,14 @@ class QuadAlgorithm(object):
         taus = np.array(SparseInput.time_list)
         waypoints = np.array(SparseInput.waypoints)
 
+        print("T")
+        print(T)
+        print("taus")
+        print(taus)
+        print("waypoints")
+        print(waypoints)
+
+
         # start the learning process
         loss_trace, parameter_trace = [], []
         current_parameter = np.array([1, 0.1, 0.1, 0.1, 0.1, 0.1, -1])
@@ -144,13 +152,21 @@ class QuadAlgorithm(object):
         # floor the horizon with 2 decimal
         horizon = math.floor(current_parameter[0]*T*100) / 100.0
         # the learned cost function, but set the time-warping function as unit (un-warping)
+
+        print("beta")
+        print(current_parameter[0])
+        print("horizon")
+        print(horizon)
+
+
         current_parameter[0] = 1
+
+
         _, opt_sol = self.oc.cocSolver(ini_state, horizon, current_parameter)
         
         # generate the time inquiry grid with N is the point number
-        # time_steps = np.linspace(0, horizon, num=100)
-        # time_steps = np.linspace(0, math.floor(horizon*100)/100.0, num=int(math.floor(horizon*100)+1))
-        time_steps = np.linspace(0, horizon, num=int(horizon/0.01 +1))
+        time_steps = np.linspace(0, horizon, num=100)
+        # time_steps = np.linspace(0, horizon, num=int(horizon/0.01 +1))
 
         opt_traj = opt_sol(time_steps)
         
@@ -183,11 +199,21 @@ class QuadAlgorithm(object):
             # convert 2d list to 2d numpy array, and slice the first 6 rows
             # num_points by 13 states, but I need states by num_points
             opt_state_traj_numpy = np.array(opt_state_traj)
-            csv_np_array = np.concatenate(( np.array([time_steps]), np.transpose(opt_state_traj_numpy[:,0:6]) ) , axis=0)
+
+            posi_velo_traj_numpy = np.transpose(opt_state_traj_numpy[:,0:6])
+            csv_np_array = np.concatenate(( np.array([time_steps]), posi_velo_traj_numpy ) , axis=0)
             np.savetxt(name_prefix_csv, csv_np_array, delimiter=",")
 
+            print("time_steps")
+            print(np.array([time_steps]))
+            print("position")
+            print(posi_velo_traj_numpy)
+            print(np.shape(posi_velo_traj_numpy))
+
+
+
             # plot trajectory in 3D space
-            self.plot_opt_trajectory(opt_state_traj_numpy, QuadInitialCondition, QuadDesiredStates, SparseInput)
+            self.plot_opt_trajectory(posi_velo_traj_numpy, QuadInitialCondition, QuadDesiredStates, SparseInput)
 
             #self.env.play_animation(self.QuadPara.l, opt_state_traj, name_prefix, save_option=True)
 
@@ -244,18 +270,18 @@ class QuadAlgorithm(object):
         return loss, diff_loss
 
 
-    def plot_opt_trajectory(self, opt_state_traj_numpy, QuadInitialCondition: QuadStates, QuadDesiredStates: QuadStates, SparseInput: DemoSparse):
+    def plot_opt_trajectory(self, posi_velo_traj_numpy, QuadInitialCondition: QuadStates, QuadDesiredStates: QuadStates, SparseInput: DemoSparse):
         """
         Plot trajectory and waypoints in 3D space with obstacles.
 
-        opt_state_traj_numpy is a 2D numpy array, each row is all the states at the same time-stamp.
+        posi_velo_traj_numpy is a 2D numpy array, num_states by time_steps. Each column is all states at time t.
         """
 
         self.fig_3d = plt.figure()
         self.ax_3d = self.fig_3d.add_subplot(111, projection='3d')
 
         # plot waypoints
-        self.ax_3d.plot3D(opt_state_traj_numpy[:,0].tolist(), opt_state_traj_numpy[:,1].tolist(), opt_state_traj_numpy[:,2].tolist(), 'blue', label='optimal trajectory')
+        self.ax_3d.plot3D(posi_velo_traj_numpy[0,:].tolist(), posi_velo_traj_numpy[1,:].tolist(), posi_velo_traj_numpy[2,:].tolist(), 'blue', label='optimal trajectory')
         for i in range(0, len(SparseInput.waypoints)):
             self.ax_3d.scatter(SparseInput.waypoints[i][0], SparseInput.waypoints[i][1], SparseInput.waypoints[i][2], c='C0')
 
