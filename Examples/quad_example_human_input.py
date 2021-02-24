@@ -26,7 +26,7 @@ if __name__ == "__main__":
     config_data = json.load(json_file)
 
     # generate random obstacles
-    num_obs = 20 # number of obstacles
+    num_obs = 30 # number of obstacles
     size_list=[0.2, 0.3, 0.4] # size lenth, width, height in x,y,z axis
     ObsList = generate_random_obs(num_obs, size_list, config_data)
 
@@ -36,7 +36,7 @@ if __name__ == "__main__":
     # the learning rate
     learning_rate = 5e-3
     # the maximum iteration steps
-    iter_num = 10
+    iter_num = 3000
     # number of grids for nonlinear programming solver
     n_grid = 25
 

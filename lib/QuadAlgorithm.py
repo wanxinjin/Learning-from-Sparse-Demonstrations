@@ -129,10 +129,10 @@ class QuadAlgorithm(object):
         current_parameter = np.array([1, 0.1, 0.1, 0.1, 0.1, 0.1, -1])
         parameter_trace += [current_parameter.tolist()]
 
-        diff_loss_norm = 100
+        loss = 100
         epsilon = 1e-2
         for j in range(self.iter_num):
-            if diff_loss_norm >= epsilon:
+            if loss >= 0.5:
                 time_grid, opt_sol = self.oc.cocSolver(ini_state, T, current_parameter)
                 auxsys_sol = self.oc.auxSysSolver(time_grid, opt_sol, current_parameter)
                 loss, diff_loss = self.getloss_pos_corrections(taus, waypoints, opt_sol, auxsys_sol)
