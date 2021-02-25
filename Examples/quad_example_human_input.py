@@ -5,6 +5,7 @@ import time
 sys.path.append(os.getcwd()+'/CPDP')
 sys.path.append(os.getcwd()+'/JinEnv')
 sys.path.append(os.getcwd()+'/lib')
+import time
 import json
 import numpy as np
 import transforms3d
@@ -36,7 +37,7 @@ if __name__ == "__main__":
     # the learning rate
     learning_rate = 5e-3
     # the maximum iteration steps
-    iter_num = 3000
+    iter_num = 5000
     # number of grids for nonlinear programming solver
     n_grid = 25
 
@@ -64,5 +65,9 @@ if __name__ == "__main__":
     # create the quadrotor algorithm solver
     Solver = QuadAlgorithm(config_data, QuadParaInput, learning_rate, iter_num, n_grid)
 
+    t0 = time.time()
     # solve it
     Solver.run(QuadInitialCondition, QuadDesiredStates, SparseInput, ObsList, print_flag=True, save_flag=True)
+    t1 = time.time()
+
+    print("Time used [min]: ", (t1-t0)/60)

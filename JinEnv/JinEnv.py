@@ -952,7 +952,7 @@ class Quadrotor:
         #                  10 * self.cost_goal_w
 
         # tune weights for final cost
-        self.final_cost = 10 * self.cost_goal_r + \
+        self.final_cost = 1 * self.cost_goal_r + \
                           11 * self.cost_goal_v + \
                           100 * self.cost_goal_q + \
                           10 * self.cost_goal_w
