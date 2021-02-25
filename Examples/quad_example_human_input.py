@@ -66,4 +66,5 @@ if __name__ == "__main__":
     Solver = QuadAlgorithm(config_data, QuadParaInput, learning_rate, iter_num, n_grid)
 
     # solve it
-    Solver.run(QuadInitialCondition, QuadDesiredStates, SparseInput, ObsList, mu_momentum=0.9, print_flag=True, save_flag=True)
+    # method_string: "Vanilla" or "Nesterov"
+    Solver.run(QuadInitialCondition, QuadDesiredStates, SparseInput, ObsList, method_string="Nesterov", mu_momentum=0.9, print_flag=True, save_flag=True)

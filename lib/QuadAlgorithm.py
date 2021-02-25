@@ -92,7 +92,7 @@ class QuadAlgorithm(object):
         self.diff_interface_ori_fn = Function('diff_interface', [self.oc.state], [jacobian(self.oc.state[6:10], self.oc.state)])
 
 
-    def run(self, QuadInitialCondition: QuadStates, QuadDesiredStates: QuadStates, SparseInput: DemoSparse, ObsList: list, mu_momentum: float, print_flag: bool, save_flag: bool):
+    def run(self, QuadInitialCondition: QuadStates, QuadDesiredStates: QuadStates, SparseInput: DemoSparse, ObsList: list, method_string: str, mu_momentum: float, print_flag: bool, save_flag: bool):
         """
         Run the algorithm
         """
@@ -115,6 +115,10 @@ class QuadAlgorithm(object):
         self.time_list_sparse = np.array(SparseInput.time_list)
         # waypoints is a numpy 2D array, each row is a waypoint in R^3, i.e. [px, py, pz]
         self.waypoints = np.array(SparseInput.waypoints)
+
+        # test why trajectory doesn't go to the goal, maybe waypoints and time_list should include goal
+        #############################################
+        # self.waypoints = np.array(SparseInput.waypoints+[QuadDesiredStates.position])
 
 
         # for debugging
@@ -140,8 +144,8 @@ class QuadAlgorithm(object):
         for j in range(self.iter_num):
             if loss > 0.5:
 
-                # update parameter and compute loss
-                loss, diff_loss = self.gradient_descent_choose(method_string="Vanilla")
+                # update parameter and compute loss, method_string: "Vanilla" or "Nesterov"
+                loss, diff_loss = self.gradient_descent_choose(method_string)
 
 
                 # do the projection step
@@ -260,11 +264,12 @@ class QuadAlgorithm(object):
             time_grid, opt_sol = self.oc.cocSolver(self.ini_state, self.time_horizon, parameter_momentum)
             auxsys_sol = self.oc.auxSysSolver(time_grid, opt_sol, parameter_momentum)
             # only need the gradient
-            _, diff_loss = self.getloss_pos_corrections(self.time_list_sparse, self.waypoints, opt_sol, auxsys_sol)
+            loss, diff_loss = self.getloss_pos_corrections(self.time_list_sparse, self.waypoints, opt_sol, auxsys_sol)
             self.velocity_momentum = self.mu_momentum * self.velocity_momentum - self.learning_rate * diff_loss
             # update the parameter
             self.current_parameter = self.current_parameter + self.velocity_momentum
 
+            """
             t0 = time.time()
             # compute loss and gradient for new parameter
             time_grid, opt_sol = self.oc.cocSolver(self.ini_state, self.time_horizon, self.current_parameter)
@@ -272,6 +277,7 @@ class QuadAlgorithm(object):
             loss, diff_loss = self.getloss_pos_corrections(self.time_list_sparse, self.waypoints, opt_sol, auxsys_sol)
             t1 = time.time()
             print("Check time [sec]: ", t1-t0)
+            """
 
         else:
             raise Exception("Wrong type of gradient descent method, only support Vanilla or Nesterov!")
