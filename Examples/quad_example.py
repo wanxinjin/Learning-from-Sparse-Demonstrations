@@ -5,6 +5,7 @@ import time
 sys.path.append(os.getcwd()+'/CPDP')
 sys.path.append(os.getcwd()+'/JinEnv')
 sys.path.append(os.getcwd()+'/lib')
+sys.path.append('/Users/zehui/Downloads/casadi-osx-py39-v3.5.5')
 import json
 import numpy as np
 import transforms3d
@@ -63,5 +64,5 @@ if __name__ == "__main__":
     Solver = QuadAlgorithm(config_data, QuadParaInput, learning_rate, iter_num, n_grid)
 
     # solve it
-    Solver.run(QuadInitialCondition, QuadDesiredStates, SparseInput, ObsList=[], print_flag=True, save_flag=True)
+    Solver.run(QuadInitialCondition, QuadDesiredStates, SparseInput, ObsList=[], mu_momentum=0.9, print_flag=True, save_flag=True)
 
