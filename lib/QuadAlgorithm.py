@@ -132,6 +132,10 @@ class QuadAlgorithm(object):
         print(self.waypoints)
 
 
+        # for comparison only
+        loss_trace_vanilla = []
+
+
         # start the learning process
         # initialize parameter vector and momentum velocity vector
         loss_trace, parameter_trace = [], []
@@ -147,6 +151,10 @@ class QuadAlgorithm(object):
                 # update parameter and compute loss, method_string: "Vanilla" or "Nesterov"
                 loss, diff_loss = self.gradient_descent_choose(method_string)
 
+                # for comparison only
+                loss_vanilla, diff_loss_vanilla = self.gradient_descent_choose("Vanilla")
+                loss_trace_vanilla += [loss_vanilla]
+
 
                 # do the projection step
                 self.current_parameter[0] = fmax(self.current_parameter[0], 1e-8)
@@ -159,6 +167,22 @@ class QuadAlgorithm(object):
             else:
                 print("The loss is less than threshold, stop the iteration.")
                 break
+
+
+        # for comparison only
+        if True:
+            fig_comp = plt.figure()
+            ax_comp = fig_comp.add_subplot(111)
+            # plot loss
+            iter_list = range(0, len(loss))
+            ax_comp.plot(iter_list, loss, linewidth=2, color="red", label="Nesterov")
+            ax_comp.plot(iter_list, loss_vanilla, linewidth=2, color="blue", label="Vanilla")
+            ax_comp.set_xlabel("Iterations")
+            ax_comp.set_ylabel("loss")
+            plt.legend(loc="upper left")
+            plt.title('Loss (Vanilla vs Nesterov).', fontweight ='bold')
+            plt.draw()
+
 
         # Below is to obtain the final uav trajectory based on the learned objective function (under un-warping settings)
         
