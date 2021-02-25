@@ -134,7 +134,7 @@ class QuadAlgorithm(object):
         loss = 100
         epsilon = 1e-2
         for j in range(self.iter_num):
-            if loss >= 0.8:
+            if loss > 0.5:
                 time_grid, opt_sol = self.oc.cocSolver(ini_state, T, current_parameter)
                 auxsys_sol = self.oc.auxSysSolver(time_grid, opt_sol, current_parameter)
                 loss, diff_loss = self.getloss_pos_corrections(taus, waypoints, opt_sol, auxsys_sol)
@@ -149,7 +149,7 @@ class QuadAlgorithm(object):
                 if print_flag:
                     print('iter:', j, ', loss:', loss_trace[-1].tolist(), ', loss gradient norm:',diff_loss_norm)
             else:
-                print("The magnitude of gradient of loss is less than epsilon, stop the iteration.")
+                print("The loss is less than threshold, stop the iteration.")
                 break
 
         # Below is to obtain the final uav trajectory based on the learned objective function (under un-warping settings)
