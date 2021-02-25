@@ -65,9 +65,5 @@ if __name__ == "__main__":
     # create the quadrotor algorithm solver
     Solver = QuadAlgorithm(config_data, QuadParaInput, learning_rate, iter_num, n_grid)
 
-    t0 = time.time()
     # solve it
     Solver.run(QuadInitialCondition, QuadDesiredStates, SparseInput, ObsList, print_flag=True, save_flag=True)
-    t1 = time.time()
-
-    print("Time used [min]: ", (t1-t0)/60)

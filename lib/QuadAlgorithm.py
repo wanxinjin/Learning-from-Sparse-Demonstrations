@@ -5,6 +5,7 @@ import time
 sys.path.append(os.getcwd()+'/CPDP')
 sys.path.append(os.getcwd()+'/JinEnv')
 sys.path.append(os.getcwd()+'/lib')
+import time
 import math
 import json
 import CPDP
@@ -93,6 +94,7 @@ class QuadAlgorithm(object):
         Run the algorithm
         """
 
+        t0 = time.time()
         print("Algorithm is running now.")
         # set the obstacles for plotting
         self.ObsList = ObsList
@@ -216,6 +218,9 @@ class QuadAlgorithm(object):
 
             print("time_steps")
             print(np.array([time_steps]))
+
+            t1 = time.time()
+            print("Time used [min]: ", (t1-t0)/60)
 
             # plot trajectory in 3D space
             self.plot_opt_trajectory(posi_velo_traj_numpy, QuadInitialCondition, QuadDesiredStates, SparseInput)
