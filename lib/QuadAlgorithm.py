@@ -134,6 +134,8 @@ class QuadAlgorithm(object):
 
         # for comparison only
         loss_trace_vanilla = []
+        self.comp_flag = False
+        self.true_loss_flag = False
 
 
         # start the learning process
@@ -145,15 +147,17 @@ class QuadAlgorithm(object):
         parameter_trace += [self.current_parameter.tolist()]
 
         loss = 100
+        diff_loss_norm = 100
         for j in range(self.iter_num):
-            if loss > 0.5:
+            if (loss > 1.0) and (diff_loss_norm > 4e-2):
 
                 # update parameter and compute loss, method_string: "Vanilla" or "Nesterov"
                 loss, diff_loss = self.gradient_descent_choose(method_string)
 
-                # for comparison only
-                loss_vanilla, diff_loss_vanilla = self.gradient_descent_choose("Vanilla")
-                loss_trace_vanilla += [loss_vanilla]
+                if self.comp_flag:
+                    # for comparison only
+                    loss_vanilla, diff_loss_vanilla = self.gradient_descent_choose("Vanilla")
+                    loss_trace_vanilla += [loss_vanilla]
 
 
                 # do the projection step
@@ -169,19 +173,19 @@ class QuadAlgorithm(object):
                 break
 
 
+        fig_comp = plt.figure()
+        ax_comp = fig_comp.add_subplot(111)
+        # plot loss
+        iter_list = range(0, len(loss_trace))
+        ax_comp.plot(iter_list, loss_trace, linewidth=2, color="red", label="Nesterov")
         # for comparison only
-        if True:
-            fig_comp = plt.figure()
-            ax_comp = fig_comp.add_subplot(111)
-            # plot loss
-            iter_list = range(0, len(loss))
-            ax_comp.plot(iter_list, loss, linewidth=2, color="red", label="Nesterov")
-            ax_comp.plot(iter_list, loss_vanilla, linewidth=2, color="blue", label="Vanilla")
-            ax_comp.set_xlabel("Iterations")
-            ax_comp.set_ylabel("loss")
-            plt.legend(loc="upper left")
-            plt.title('Loss (Vanilla vs Nesterov).', fontweight ='bold')
-            plt.draw()
+        if self.comp_flag:
+            ax_comp.plot(iter_list, loss_trace_vanilla, linewidth=2, color="blue", label="Vanilla")
+        ax_comp.set_xlabel("Iterations")
+        ax_comp.set_ylabel("loss")
+        plt.legend(loc="upper right")
+        plt.title('Loss (Vanilla vs Nesterov).', fontweight ='bold')
+        plt.draw()
 
 
         # Below is to obtain the final uav trajectory based on the learned objective function (under un-warping settings)
@@ -293,15 +297,14 @@ class QuadAlgorithm(object):
             # update the parameter
             self.current_parameter = self.current_parameter + self.velocity_momentum
 
-            """
-            t0 = time.time()
-            # compute loss and gradient for new parameter
-            time_grid, opt_sol = self.oc.cocSolver(self.ini_state, self.time_horizon, self.current_parameter)
-            auxsys_sol = self.oc.auxSysSolver(time_grid, opt_sol, self.current_parameter)
-            loss, diff_loss = self.getloss_pos_corrections(self.time_list_sparse, self.waypoints, opt_sol, auxsys_sol)
-            t1 = time.time()
-            print("Check time [sec]: ", t1-t0)
-            """
+            if self.true_loss_flag:
+                # t0 = time.time()
+                # compute loss and gradient for new parameter
+                time_grid, opt_sol = self.oc.cocSolver(self.ini_state, self.time_horizon, self.current_parameter)
+                auxsys_sol = self.oc.auxSysSolver(time_grid, opt_sol, self.current_parameter)
+                loss, diff_loss = self.getloss_pos_corrections(self.time_list_sparse, self.waypoints, opt_sol, auxsys_sol)
+                # t1 = time.time()
+                # print("Check time [sec]: ", t1-t0)
 
         else:
             raise Exception("Wrong type of gradient descent method, only support Vanilla or Nesterov!")
