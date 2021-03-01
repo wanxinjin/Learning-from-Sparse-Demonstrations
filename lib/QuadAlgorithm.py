@@ -123,7 +123,7 @@ class QuadAlgorithm(object):
 
     def run(self, QuadInitialCondition: QuadStates, QuadDesiredStates: QuadStates, SparseInput: DemoSparse, ObsList: list, print_flag: bool, save_flag: bool):
         """
-        Run the algorithm
+        Run the algorithm.
         """
 
         t0 = time.time()
@@ -161,17 +161,20 @@ class QuadAlgorithm(object):
 
         # for comparison only
         loss_trace_vanilla = []
-        self.comp_flag = False
+        # True to run comparison between two optimization methods for learning process
+        self.comparison_flag = False
+        # True to compute actual loss and gradient of Nesterov Momentum method
         self.true_loss_flag = False
 
 
         # start the learning process
         # initialize parameter vector and momentum velocity vector
-        loss_trace, parameter_trace = [], []
+        loss_trace = []
+        parameter_trace = []
         self.current_parameter = np.array([1, 0.1, 0.1, 0.1, 0.1, 0.1, -1])
         # momentum velocity vector, 1D numpy array
         self.velocity_momentum = np.array([0] * self.current_parameter.shape[0])
-        parameter_trace += [self.current_parameter.tolist()]
+        parameter_trace.append(self.current_parameter.tolist())
 
         loss = 100
         diff_loss_norm = 100
@@ -180,17 +183,17 @@ class QuadAlgorithm(object):
 
                 # update parameter and compute loss, optimization_method_str: "Vanilla" or "Nesterov"
                 loss, diff_loss = self.gradient_descent_choose(self.optimization_method_str)
+                loss_trace.append(loss)
 
-                if self.comp_flag:
-                    # for comparison only
+                # for comparison only
+                if self.comparison_flag:
                     loss_vanilla, diff_loss_vanilla = self.gradient_descent_choose("Vanilla")
-                    loss_trace_vanilla += [loss_vanilla]
+                    loss_trace_vanilla.append(loss_vanilla)
 
 
                 # do the projection step
                 self.current_parameter[0] = fmax(self.current_parameter[0], 1e-8)
-                loss_trace += [loss]
-                parameter_trace += [self.current_parameter.tolist()]
+                parameter_trace.append(self.current_parameter.tolist())
                 
                 diff_loss_norm = np.linalg.norm(diff_loss)
                 if print_flag:
@@ -204,10 +207,10 @@ class QuadAlgorithm(object):
         ax_comp = fig_comp.add_subplot(111)
         # plot loss
         iter_list = range(0, len(loss_trace))
-        ax_comp.plot(iter_list, loss_trace, linewidth=2, color="red", label="Nesterov")
+        ax_comp.plot(iter_list, loss_trace, linewidth=1, color="red", label=self.optimization_method_str)
         # for comparison only
-        if self.comp_flag:
-            ax_comp.plot(iter_list, loss_trace_vanilla, linewidth=2, color="blue", label="Vanilla")
+        if self.comparison_flag:
+            ax_comp.plot(iter_list, loss_trace_vanilla, linewidth=1, color="blue", label="Vanilla")
         ax_comp.set_xlabel("Iterations")
         ax_comp.set_ylabel("loss")
         plt.legend(loc="upper right")
