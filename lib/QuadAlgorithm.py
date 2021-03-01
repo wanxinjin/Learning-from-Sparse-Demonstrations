@@ -5,6 +5,7 @@ import time
 sys.path.append(os.getcwd()+'/CPDP')
 sys.path.append(os.getcwd()+'/JinEnv')
 sys.path.append(os.getcwd()+'/lib')
+import copy
 import time
 import math
 import json
@@ -158,42 +159,44 @@ class QuadAlgorithm(object):
         print("waypoints")
         print(self.waypoints)
 
+        # start the learning process
+        # initialize parameter vector and momentum velocity vector
+        loss_trace = []
+        parameter_trace = []
+        current_parameter = np.array([1, 0.1, 0.1, 0.1, 0.1, 0.1, -1])
+        # momentum velocity vector, 1D numpy array
+        self.velocity_momentum = np.array([0] * current_parameter.shape[0])
+        parameter_trace.append(current_parameter.tolist())
+
 
         # for comparison only
         loss_trace_vanilla = []
+        current_parameter_vanilla = copy.deepcopy(current_parameter)
         # True to run comparison between two optimization methods for learning process
         self.comparison_flag = True
         # True to compute actual loss and gradient of Nesterov Momentum method
         self.true_loss_flag = True
 
 
-        # start the learning process
-        # initialize parameter vector and momentum velocity vector
-        loss_trace = []
-        parameter_trace = []
-        self.current_parameter = np.array([1, 0.1, 0.1, 0.1, 0.1, 0.1, -1])
-        # momentum velocity vector, 1D numpy array
-        self.velocity_momentum = np.array([0] * self.current_parameter.shape[0])
-        parameter_trace.append(self.current_parameter.tolist())
-
         loss = 100
         diff_loss_norm = 100
         for j in range(self.iter_num):
-            if (loss > 1.0) and (diff_loss_norm > 0.04):
+            if (loss > 0.01) and (diff_loss_norm > 0.02):
 
                 # update parameter and compute loss, optimization_method_str: "Vanilla" or "Nesterov"
-                loss, diff_loss = self.gradient_descent_choose(self.optimization_method_str)
+                loss, diff_loss = self.gradient_descent_choose(current_parameter, self.optimization_method_str)
                 loss_trace.append(loss)
 
                 # for comparison only
                 if self.comparison_flag:
-                    loss_vanilla, diff_loss_vanilla = self.gradient_descent_choose("Vanilla")
+                    loss_vanilla, diff_loss_vanilla = self.gradient_descent_choose(current_parameter_vanilla, "Vanilla")
                     loss_trace_vanilla.append(loss_vanilla)
+                    current_parameter_vanilla[0] = fmax(current_parameter_vanilla[0], 1e-8)
 
 
                 # do the projection step
-                self.current_parameter[0] = fmax(self.current_parameter[0], 1e-8)
-                parameter_trace.append(self.current_parameter.tolist())
+                current_parameter[0] = fmax(current_parameter[0], 1e-8)
+                parameter_trace.append(current_parameter.tolist())
                 
                 diff_loss_norm = np.linalg.norm(diff_loss)
                 if print_flag:
@@ -214,7 +217,7 @@ class QuadAlgorithm(object):
         ax_comp_1.set_xlabel("Iterations")
         ax_comp_1.set_ylabel("loss")
         ax_comp_1.legend(loc="upper right")
-        ax_comp_1.title.set_text('Loss (Vanilla vs Nesterov).', fontweight ='bold')
+        ax_comp_1.set_title('Loss Plot', fontweight ='bold')
 
         # plot log_10(loss)
         ax_comp_2 = fig_comp.add_subplot(122)
@@ -225,7 +228,7 @@ class QuadAlgorithm(object):
         ax_comp_2.set_xlabel("Iterations")
         ax_comp_2.set_ylabel("log10(loss)")
         ax_comp_2.legend(loc="upper right")
-        ax_comp_2.title.set_text('Log10(Loss) (Vanilla vs Nesterov).', fontweight ='bold')
+        ax_comp_2.set_title('Log10(Loss) Plot', fontweight ='bold')
 
         plt.draw()
 
@@ -244,7 +247,7 @@ class QuadAlgorithm(object):
         # the learned cost function, but set the time-warping function as unit (un-warping)
 
         print("beta")
-        print(self.current_parameter[0])
+        print(current_parameter[0])
         print("horizon")
         print(horizon)
 
@@ -252,7 +255,7 @@ class QuadAlgorithm(object):
         # current_parameter[0] = 1
 
 
-        _, opt_sol = self.oc.cocSolver(self.ini_state, horizon, self.current_parameter)
+        _, opt_sol = self.oc.cocSolver(self.ini_state, horizon, current_parameter)
         
         # generate the time inquiry grid with N is the point number
         time_steps = np.linspace(0, horizon, num=100+1)
@@ -310,40 +313,41 @@ class QuadAlgorithm(object):
             self.env.play_animation(self.QuadPara.l, opt_state_traj_numpy, name_prefix_animation, space_limits, save_option=True)
 
 
-    def gradient_descent_choose(self, method_string: str):
+    def gradient_descent_choose(self, current_parameter, method_string: str):
         """
         Choose which gradient descent method to use.
 
         Input:
+            current_parameter: a 1D numpy array for current parameter which needs to be optimized
             method_string: "Vanilla" or "Nesterov"
         """
 
         if method_string == "Vanilla":
 
             # vanilla gradient descent method
-            time_grid, opt_sol = self.oc.cocSolver(self.ini_state, self.time_horizon, self.current_parameter)
-            auxsys_sol = self.oc.auxSysSolver(time_grid, opt_sol, self.current_parameter)
+            time_grid, opt_sol = self.oc.cocSolver(self.ini_state, self.time_horizon, current_parameter)
+            auxsys_sol = self.oc.auxSysSolver(time_grid, opt_sol, current_parameter)
             loss, diff_loss = self.getloss_pos_corrections(self.time_list_sparse, self.waypoints, opt_sol, auxsys_sol)
-            self.current_parameter -= self.learning_rate * diff_loss
+            current_parameter = current_parameter - self.learning_rate * np.array(diff_loss)
 
         elif method_string == "Nesterov":
 
             # compute the lookahead parameter
-            parameter_momentum = self.current_parameter + self.mu_momentum * self.velocity_momentum
+            parameter_momentum = current_parameter + self.mu_momentum * self.velocity_momentum
             # update velocity_momentum
             time_grid, opt_sol = self.oc.cocSolver(self.ini_state, self.time_horizon, parameter_momentum)
             auxsys_sol = self.oc.auxSysSolver(time_grid, opt_sol, parameter_momentum)
             # only need the gradient
             loss, diff_loss = self.getloss_pos_corrections(self.time_list_sparse, self.waypoints, opt_sol, auxsys_sol)
-            self.velocity_momentum = self.mu_momentum * self.velocity_momentum - self.learning_rate * diff_loss
+            self.velocity_momentum = self.mu_momentum * self.velocity_momentum - self.learning_rate * np.array(diff_loss)
             # update the parameter
-            self.current_parameter = self.current_parameter + self.velocity_momentum
+            current_parameter = current_parameter + self.velocity_momentum
 
             if self.true_loss_flag:
                 # t0 = time.time()
                 # compute loss and gradient for new parameter
-                time_grid, opt_sol = self.oc.cocSolver(self.ini_state, self.time_horizon, self.current_parameter)
-                auxsys_sol = self.oc.auxSysSolver(time_grid, opt_sol, self.current_parameter)
+                time_grid, opt_sol = self.oc.cocSolver(self.ini_state, self.time_horizon, current_parameter)
+                auxsys_sol = self.oc.auxSysSolver(time_grid, opt_sol, current_parameter)
                 loss, diff_loss = self.getloss_pos_corrections(self.time_list_sparse, self.waypoints, opt_sol, auxsys_sol)
                 # t1 = time.time()
                 # print("Check time [sec]: ", t1-t0)

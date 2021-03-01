@@ -63,9 +63,9 @@ if __name__ == "__main__":
 
     # load the optimization method for learning iteration
     # para_optimization_dict = {"learning_rate": 0.01, "iter_num": 1000, "method": "Vanilla"} # This is for Vanilla gradient descent
-    para_optimization_dict = {"learning_rate": 0.01, "iter_num": 1000, "method": "Nesterov", "mu": 0.9} # This is for Nesterov Momentum
+    para_optimization_dict = {"learning_rate": 0.01, "iter_num": 100, "method": "Nesterov", "mu": 0.9} # This is for Nesterov Momentum
     Solver.load_optimization_method(para_optimization_dict)
 
     # solve it
     # method_string: "Vanilla" or "Nesterov"
-    Solver.run(QuadInitialCondition, QuadDesiredStates, SparseInput, ObsList, print_flag=True, save_flag=True)
+    Solver.run(QuadInitialCondition, QuadDesiredStates, SparseInput, ObsList, print_flag=True, save_flag=False)
