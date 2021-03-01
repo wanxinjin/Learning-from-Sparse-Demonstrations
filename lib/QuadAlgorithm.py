@@ -25,16 +25,18 @@ from generate_random_obs import generate_random_obs
 
 
 class QuadAlgorithm(object):
-    learning_rate: float # the learning rate
     iter_num: int # the maximum iteration number
     n_grid: int # the number of grid for nonlinear programming
     QuadPara: QuadPara # the dataclass QuadPara including the quadrotor parameters
     ini_state: list # initial states for in a 1D list, [posi, velo, quaternion, angular_velo]
     time_horizon: float # total time [sec] for sparse demonstration (waypoints)
+
+    learning_rate: float # the learning rate
+    optimization_method_str: str # a string of optimization method for learning process
     mu_momentum: float # momentum parameter, usually around 0.9, 0 < mu_momentum < 1
 
 
-    def __init__(self, config_data, QuadParaInput: QuadPara, learning_rate: float, iter_num: int, n_grid: int):
+    def __init__(self, config_data, QuadParaInput: QuadPara, n_grid: int):
         """
         constructor
 
@@ -45,8 +47,6 @@ class QuadAlgorithm(object):
         """
 
         self.QuadPara = QuadParaInput
-        self.learning_rate = learning_rate
-        self.iter_num = iter_num
         self.n_grid = n_grid
 
         # the lab space limit [meter] in x-axis [x_min, x_max]
@@ -92,7 +92,36 @@ class QuadAlgorithm(object):
         self.diff_interface_ori_fn = Function('diff_interface', [self.oc.state], [jacobian(self.oc.state[6:10], self.oc.state)])
 
 
-    def run(self, QuadInitialCondition: QuadStates, QuadDesiredStates: QuadStates, SparseInput: DemoSparse, ObsList: list, method_string: str, mu_momentum: float, print_flag: bool, save_flag: bool):
+    def load_optimization_method(self, para_input: dict):
+        """
+        Load the optimization method. Now support Vanilla gradient descent or Nesterov Momentum.
+
+        Input:
+            para_input: a dictionary which includes the parameters.
+        
+        Example:
+            # This is for Vanilla gradient descent
+            para_input = {"learning_rate": 0.01, "iter_num": 1000, "method": "Vanilla"}
+            
+            # This is for Nesterov Momentum
+            para_input = {"learning_rate": 0.01, "iter_num": 1000, "method": "Nesterov", "mu": 0.9}
+        """
+
+        # learning rate
+        self.learning_rate = para_input["learning_rate"]
+        # maximum iteration number
+        self.iter_num = para_input["iter_num"]
+        # the optimization method
+        if (para_input["method"] == "Vanilla"):
+            self.optimization_method_str = para_input["method"]
+        elif (para_input["method"] == "Nesterov"):
+            self.optimization_method_str = para_input["method"]
+            self.mu_momentum = para_input["mu"]
+        else:
+            raise Exception("Wrong optimization method type!")
+
+
+    def run(self, QuadInitialCondition: QuadStates, QuadDesiredStates: QuadStates, SparseInput: DemoSparse, ObsList: list, print_flag: bool, save_flag: bool):
         """
         Run the algorithm
         """
@@ -106,8 +135,6 @@ class QuadAlgorithm(object):
         # set initial condition
         self.ini_state = QuadInitialCondition.position + QuadInitialCondition.velocity + \
             QuadInitialCondition.attitude_quaternion + QuadInitialCondition.angular_velocity
-        # set momentum parameter
-        self.mu_momentum = mu_momentum
 
         # create sparse waypionts and time horizon
         self.time_horizon = SparseInput.time_horizon
@@ -149,10 +176,10 @@ class QuadAlgorithm(object):
         loss = 100
         diff_loss_norm = 100
         for j in range(self.iter_num):
-            if (loss > 1.0) and (diff_loss_norm > 4e-2):
+            if (loss > 1.0) and (diff_loss_norm > 0.04):
 
-                # update parameter and compute loss, method_string: "Vanilla" or "Nesterov"
-                loss, diff_loss = self.gradient_descent_choose(method_string)
+                # update parameter and compute loss, optimization_method_str: "Vanilla" or "Nesterov"
+                loss, diff_loss = self.gradient_descent_choose(self.optimization_method_str)
 
                 if self.comp_flag:
                     # for comparison only

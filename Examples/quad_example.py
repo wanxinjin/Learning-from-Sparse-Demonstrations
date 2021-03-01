@@ -26,10 +26,6 @@ if __name__ == "__main__":
     # define the quadrotor dynamics parameters
     QuadParaInput = QuadPara(inertial_list=[1.0, 1.0, 1.0], mass=1.0, l=1.0, c=0.02)
 
-    # the learning rate
-    learning_rate = 5e-3
-    # the maximum iteration steps
-    iter_num = 3
     # number of grids for nonlinear programming solver
     n_grid = 25
 
@@ -61,9 +57,14 @@ if __name__ == "__main__":
     QuadDesiredStates.angular_velocity = [0, 0, 0]
 
     # create the quadrotor algorithm solver
-    Solver = QuadAlgorithm(config_data, QuadParaInput, learning_rate, iter_num, n_grid)
+    Solver = QuadAlgorithm(config_data, QuadParaInput, n_grid)
+
+    # load the optimization method for learning iteration
+    # para_optimization_dict = {"learning_rate": 0.01, "iter_num": 10, "method": "Vanilla"} # This is for Vanilla gradient descent
+    para_optimization_dict = {"learning_rate": 0.01, "iter_num": 10, "method": "Nesterov", "mu": 0.9} # This is for Nesterov Momentum
+    Solver.load_optimization_method(para_optimization_dict)
 
     # solve it
     # method_string: "Vanilla" or "Nesterov"
-    Solver.run(QuadInitialCondition, QuadDesiredStates, SparseInput, ObsList=[], method_string="Vanilla", mu_momentum=0.9, print_flag=True, save_flag=True)
+    Solver.run(QuadInitialCondition, QuadDesiredStates, SparseInput, ObsList=[], print_flag=True, save_flag=True)
 
