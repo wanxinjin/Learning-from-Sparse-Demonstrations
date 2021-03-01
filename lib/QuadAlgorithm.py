@@ -162,9 +162,9 @@ class QuadAlgorithm(object):
         # for comparison only
         loss_trace_vanilla = []
         # True to run comparison between two optimization methods for learning process
-        self.comparison_flag = False
+        self.comparison_flag = True
         # True to compute actual loss and gradient of Nesterov Momentum method
-        self.true_loss_flag = False
+        self.true_loss_flag = True
 
 
         # start the learning process
@@ -197,24 +197,36 @@ class QuadAlgorithm(object):
                 
                 diff_loss_norm = np.linalg.norm(diff_loss)
                 if print_flag:
-                    print('iter:', j, ', loss:', loss_trace[-1].tolist(), ', loss gradient norm:', diff_loss_norm)
+                    print('iter:', j, ', loss:', loss_trace[-1], ', loss gradient norm:', diff_loss_norm)
             else:
                 print("The loss is less than threshold, stop the iteration.")
                 break
 
 
         fig_comp = plt.figure()
-        ax_comp = fig_comp.add_subplot(111)
         # plot loss
+        ax_comp_1 = fig_comp.add_subplot(121)
         iter_list = range(0, len(loss_trace))
-        ax_comp.plot(iter_list, loss_trace, linewidth=1, color="red", label=self.optimization_method_str)
+        ax_comp_1.plot(iter_list, loss_trace, linewidth=1, color="red", marker="*", label=self.optimization_method_str)
         # for comparison only
         if self.comparison_flag:
-            ax_comp.plot(iter_list, loss_trace_vanilla, linewidth=1, color="blue", label="Vanilla")
-        ax_comp.set_xlabel("Iterations")
-        ax_comp.set_ylabel("loss")
-        plt.legend(loc="upper right")
-        plt.title('Loss (Vanilla vs Nesterov).', fontweight ='bold')
+            ax_comp_1.plot(iter_list, loss_trace_vanilla, linewidth=1, color="blue", marker="*", label="Vanilla")
+        ax_comp_1.set_xlabel("Iterations")
+        ax_comp_1.set_ylabel("loss")
+        ax_comp_1.legend(loc="upper right")
+        ax_comp_1.title.set_text('Loss (Vanilla vs Nesterov).', fontweight ='bold')
+
+        # plot log_10(loss)
+        ax_comp_2 = fig_comp.add_subplot(122)
+        ax_comp_2.plot(iter_list, np.log10(loss_trace).tolist(), linewidth=1, color="red", marker="*", label=self.optimization_method_str)
+        # for comparison only
+        if self.comparison_flag:
+            ax_comp_2.plot(iter_list, np.log10(loss_trace_vanilla).tolist(), linewidth=1, color="blue", marker="*", label="Vanilla")
+        ax_comp_2.set_xlabel("Iterations")
+        ax_comp_2.set_ylabel("log10(loss)")
+        ax_comp_2.legend(loc="upper right")
+        ax_comp_2.title.set_text('Log10(Loss) (Vanilla vs Nesterov).', fontweight ='bold')
+
         plt.draw()
 
 
