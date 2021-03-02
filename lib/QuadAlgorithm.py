@@ -216,7 +216,7 @@ class QuadAlgorithm(object):
         loss = 100
         diff_loss_norm = 100
         for j in range(self.iter_num):
-            if (loss > 0.01) and (diff_loss_norm > 0.02):
+            if (loss > 0.01) and (diff_loss_norm > 0.01):
 
                 # update parameter and compute loss by a pre-defined optimization method
                 loss, diff_loss, current_parameter = self.optimization_function(self, current_parameter, j)
@@ -535,11 +535,11 @@ class QuadAlgorithm(object):
             label_list: a 1D list, each element is a string for method name
         """
 
-        iter_list = range(0, len(loss_trace_comparison[0]))
         fig_comp = plt.figure()
         # plot loss
         ax_comp_1 = fig_comp.add_subplot(121)
         for idx in range (0, len(loss_trace_comparison)):
+            iter_list = range(0, len(loss_trace_comparison[idx]))
             loss_trace_percentage = numpy.array(loss_trace_comparison[idx]) / loss_trace_comparison[idx][0]
             ax_comp_1.plot(iter_list, loss_trace_percentage, linewidth=1, marker="*", label=label_list[idx])
             print(label_list[idx] + " loss [max, min]: ", [loss_trace_comparison[idx][0], loss_trace_comparison[idx][-1]])
@@ -551,6 +551,7 @@ class QuadAlgorithm(object):
         # plot log(loss)
         ax_comp_2 = fig_comp.add_subplot(122)
         for idx in range (0, len(loss_trace_comparison)):
+            iter_list = range(0, len(loss_trace_comparison[idx]))
             ax_comp_2.plot(iter_list, np.log(loss_trace_comparison[idx]).tolist(), linewidth=1, marker="*", label=label_list[idx])
             print(label_list[idx] + " loss [max, min]: ", [loss_trace_comparison[idx][0], loss_trace_comparison[idx][-1]])
         ax_comp_2.set_xlabel("Iterations")
