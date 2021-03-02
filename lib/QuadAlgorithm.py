@@ -240,6 +240,8 @@ class QuadAlgorithm(object):
         ax_comp_1.plot(iter_list, loss_trace_plot_percentage, linewidth=1, color="red", marker="*", label=self.optimization_method_str)
         # for comparison only
         if self.comparison_flag:
+            print("Vanilla lost", loss_trace_vanilla[-1])
+            print("Nesterov lost", loss_trace_nesterov[-1])
             loss_trace_plot_vanilla_percentage = numpy.array(loss_trace_vanilla) / loss_trace_vanilla[0]
             loss_trace_plot_nesterov_percentage = numpy.array(loss_trace_nesterov) / loss_trace_nesterov[0]
             ax_comp_1.plot(iter_list, loss_trace_plot_vanilla_percentage, linewidth=1, color="blue", marker="*", label="Vanilla")
