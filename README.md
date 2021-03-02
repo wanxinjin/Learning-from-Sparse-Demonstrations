@@ -7,7 +7,7 @@ Wanxin Jin, Todd D. Murphey, Dana Kulić, Neta Ezer, Shaoshuai Mou. Please find 
 * Demos: https://wanxinjin.github.io/posts/lfsd for video demos.
 
 This repo has been tested with:
-* Python 3.8.5, Ubuntu 20.04.2 LTS
+* Python 3.8.5, Ubuntu 20.04.2 LTS, CasADi 3.5.5, Numpy 1.20.1, Scipy 1.6.1
 
 ## Project Structure
 The current version of the project consists of three folders:
@@ -34,9 +34,9 @@ use of the PDP package or JinEnv Package.
    * [PyQt5](https://pypi.org/project/PyQt5/)
 
 ```
-sudo apt update
-sudo apt install coinor-libipopt-dev ffmpeg
-pip3 install casadi numpy transfroms3d scipy matplotlib pyqt5
+$ sudo apt update
+$ sudo apt install coinor-libipopt-dev ffmpeg
+$ pip3 install casadi numpy transforms3d scipy matplotlib pyqt5
 ```
 
 

@@ -216,7 +216,7 @@ class QuadAlgorithm(object):
         loss = 100
         diff_loss_norm = 100
         for j in range(self.iter_num):
-            if (loss > 0.01) and (diff_loss_norm > 0.01):
+            if (loss > 0.001) and (diff_loss_norm > 0.001):
 
                 # update parameter and compute loss by a pre-defined optimization method
                 loss, diff_loss, current_parameter = self.optimization_function(self, current_parameter, j)
