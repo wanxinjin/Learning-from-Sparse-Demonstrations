@@ -75,28 +75,28 @@ if __name__ == "__main__":
     Solver.run(QuadInitialCondition, QuadDesiredStates, SparseInput, ObsList, print_flag=True, save_flag=False)
     loss_trace_1 = copy.deepcopy(Solver.loss_trace)
     loss_trace_comparison.append(loss_trace_1)
-    label_list.append(para_nesterov_1["learning_rate"])
+    label_list.append(str(para_nesterov_1["learning_rate"]))
 
     # Nesterov
     Solver.load_optimization_function(para_nesterov_2)
     Solver.run(QuadInitialCondition, QuadDesiredStates, SparseInput, ObsList, print_flag=True, save_flag=False)
     loss_trace_2 = copy.deepcopy(Solver.loss_trace)
     loss_trace_comparison.append(loss_trace_2)
-    label_list.append(para_nesterov_2["learning_rate"])
+    label_list.append(str(para_nesterov_2["learning_rate"]))
 
     # Adam
     Solver.load_optimization_function(para_nesterov_3)
     Solver.run(QuadInitialCondition, QuadDesiredStates, SparseInput, ObsList, print_flag=True, save_flag=False)
     loss_trace_3 = copy.deepcopy(Solver.loss_trace)
     loss_trace_comparison.append(loss_trace_3)
-    label_list.append(para_nesterov_3["learning_rate"])
+    label_list.append(str(para_nesterov_3["learning_rate"]))
 
     # Nadam
     Solver.load_optimization_function(para_nesterov_4)
     Solver.run(QuadInitialCondition, QuadDesiredStates, SparseInput, ObsList, print_flag=True, save_flag=False)
     loss_trace_4 = copy.deepcopy(Solver.loss_trace)
     loss_trace_comparison.append(loss_trace_4)
-    label_list.append(para_nesterov_4["learning_rate"])
+    label_list.append(str(para_nesterov_4["learning_rate"]))
 
     # plot the comparison
     Solver.plot_opt_method_comparison(loss_trace_comparison, label_list)
