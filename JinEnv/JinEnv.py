@@ -946,11 +946,6 @@ class Quadrotor:
                          self.w_zsq * self.feature_zsq + self.w_z * self.feature_z + \
                          w_thrust * self.cost_thrust
 
-        #self.final_cost = 1 * self.cost_goal_r + \
-        #                  11 * self.cost_goal_v + \
-        #                  100 * self.cost_goal_q + \
-        #                  10 * self.cost_goal_w
-
         # tune weights for final cost
         self.final_cost = 1 * self.cost_goal_r + \
                           11 * self.cost_goal_v + \

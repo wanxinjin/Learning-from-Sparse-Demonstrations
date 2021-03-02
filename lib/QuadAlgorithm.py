@@ -31,10 +31,13 @@ class QuadAlgorithm(object):
     QuadPara: QuadPara # the dataclass QuadPara including the quadrotor parameters
     ini_state: list # initial states for in a 1D list, [posi, velo, quaternion, angular_velo]
     time_horizon: float # total time [sec] for sparse demonstration (waypoints)
+    loss_trace: list # 1D list for loss trajectory during the iteration
+    parameter_trace: list # 2D list for parameter trajectory during the iteration, each sub-list is a parameter
 
     learning_rate: float # the learning rate
     optimization_method_str: str # a string of optimization method for learning process
     mu_momentum: float # momentum parameter, usually around 0.9, 0 < mu_momentum < 1
+    actual_loss_print_nesterov_flag: bool # (for Nesterov only) True to print actual loss, otherwise print loss with lookahead
     beta_1_adam: float # parameter beta_1 for Adam, typically 0.9
     beta_2_adam: float # parameter beta_2 for Adam, typically 0.999
     epsilon_adam: float # parameter epsilon for Adam, typically 1e-8
@@ -99,9 +102,9 @@ class QuadAlgorithm(object):
         self.diff_interface_ori_fn = Function('diff_interface', [self.oc.state], [jacobian(self.oc.state[6:10], self.oc.state)])
 
 
-    def load_optimization_parameter(self, para_input: dict):
+    def load_optimization_function(self, para_input: dict):
         """
-        Load the optimization parameter. Now support Vanilla gradient descent, Nesterov Momentum, Adam, and Nadam.
+        Load the optimization function. Now support Vanilla gradient descent, Nesterov Momentum, Adam, and Nadam.
 
         Input:
             para_input: a dictionary which includes the parameters.
@@ -111,7 +114,7 @@ class QuadAlgorithm(object):
             para_input = {"learning_rate": 0.01, "iter_num": 1000, "method": "Vanilla"}
             
             # This is for Nesterov Momentum
-            para_input = {"learning_rate": 0.01, "iter_num": 1000, "method": "Nesterov", "mu": 0.9}
+            para_input = {"learning_rate": 0.01, "iter_num": 1000, "method": "Nesterov", "mu": 0.9, "true_loss_print_flag": True}
 
             # This is for Adam
             para_optimization_dict = {"learning_rate": 0.01, "iter_num": 100, "method": "Adam", "beta_1": 0.9, "beta_2": 0.999, "epsilon": 1e-8}
@@ -125,21 +128,46 @@ class QuadAlgorithm(object):
         # maximum iteration number
         self.iter_num = para_input["iter_num"]
         # the optimization method
+        self.optimization_method_str = para_input["method"]
+
+        print("check!!!!")
+        print(len(vertcat(SX.sym('beta'), self.env.cost_auxvar)))
+
+        # need to revise it!!!!!!!!!!!!
+        len_para = 7
+
         if (para_input["method"] == "Vanilla"):
-            self.optimization_method_str = para_input["method"]
+            self.optimization_function = lambda self, theta, idx: self.Vanilla_gradient_descent(self, theta)
+
         elif (para_input["method"] == "Nesterov"):
-            self.optimization_method_str = para_input["method"]
             self.mu_momentum = para_input["mu"]
+            self.actual_loss_print_nesterov_flag = para_input["true_loss_print_flag"]
+            self.optimization_function = lambda self, theta, idx: self.Nesterov(self, theta)
+            # initialization for Nesterov
+            self.velocity_Nesterov = np.array([0] * len_para)
+
         elif (para_input["method"] == "Adam"):
-            self.optimization_method_str = para_input["method"]
             self.beta_1_adam = para_input["beta_1"]
             self.beta_2_adam = para_input["beta_2"]
             self.epsilon_adam = para_input["epsilon"]
+            self.optimization_function = lambda self, theta, idx: self.Adam(self, theta, idx)
+            # initialization for Adam
+            self.momentum_vector_adam = np.array([0] * len_para)
+            self.velocity_vector_adam = np.array([0] * len_para)
+            self.momentum_vector_hat_adam = np.array([0] * len_para)
+            self.velocity_vector_hat_adam = np.array([0] * len_para)
+
         elif (para_input["method"] == "Nadam"):
-            self.optimization_method_str = para_input["method"]
             self.beta_1_nadam = para_input["beta_1"]
             self.beta_2_nadam = para_input["beta_2"]
             self.epsilon_nadam = para_input["epsilon"]
+            self.optimization_function = lambda self, theta, idx: self.Nadam(self, theta, idx)
+            # initialization for Nadam
+            self.momentum_vector_nadam = np.array([0] * len_para)
+            self.velocity_vector_nadam = np.array([0] * len_para)
+            self.momentum_vector_hat_nadam = np.array([0] * len_para)
+            self.velocity_vector_hat_nadam = np.array([0] * len_para)
+
         else:
             raise Exception("Wrong optimization method type!")
 
@@ -183,116 +211,54 @@ class QuadAlgorithm(object):
 
         # start the learning process
         # initialize parameter vector and momentum velocity vector
-        loss_trace = []
-        parameter_trace = []
+        self.loss_trace = []
+        self.parameter_trace = []
         current_parameter = np.array([1, 0.1, 0.1, 0.1, 0.1, 0.1, -1])
-        parameter_trace.append(current_parameter.tolist())
-
-        # initialization for Nesterov
-        self.velocity_Nesterov = np.array([0] * current_parameter.shape[0])
-
-        # initialization for Adam
-        self.momentum_vector_adam = np.array([0] * current_parameter.shape[0])
-        self.velocity_vector_adam = np.array([0] * current_parameter.shape[0])
-        self.momentum_vector_hat_adam = np.array([0] * current_parameter.shape[0])
-        self.velocity_vector_hat_adam = np.array([0] * current_parameter.shape[0])
-
-        # initialization for Nadam
-        self.momentum_vector_nadam = np.array([0] * current_parameter.shape[0])
-        self.velocity_vector_nadam = np.array([0] * current_parameter.shape[0])
-        self.momentum_vector_hat_nadam = np.array([0] * current_parameter.shape[0])
-        self.velocity_vector_hat_nadam = np.array([0] * current_parameter.shape[0])
-
-        # for comparison only
-        loss_trace_vanilla = []
-        current_parameter_vanilla = copy.deepcopy(current_parameter)
-        loss_trace_nesterov = []
-        current_parameter_nesterov = copy.deepcopy(current_parameter)
-        loss_trace_adam = []
-        current_parameter_adam = copy.deepcopy(current_parameter)
-        # True to run comparison between two optimization methods for learning process
-        self.comparison_flag = True
-        # True to compute actual loss and gradient of Nesterov Momentum method
-        self.true_loss_nesterov_flag = True
-        if self.comparison_flag:
-            print("Overwrite parameters!")
-            self.mu_momentum = 0.9
-            self.beta_1_adam = self.beta_1_nadam
-            self.beta_2_adam = self.beta_2_nadam
-            self.epsilon_adam = self.epsilon_nadam
-
+        # current_parameter = np.array([1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1])
+        self.parameter_trace.append(current_parameter.tolist())
 
         loss = 100
         diff_loss_norm = 100
         for j in range(self.iter_num):
             if (loss > 0.01) and (diff_loss_norm > 0.02):
 
-                # update parameter and compute loss, optimization_method_str: "Vanilla", "Nesterov" or "Adam"
-                loss, diff_loss, current_parameter = self.gradient_descent_choose(current_parameter, j, self.optimization_method_str)
-                loss_trace.append(loss)
-
-                # for comparison only
-                if self.comparison_flag:
-                    loss_vanilla, diff_loss_vanilla, current_parameter_vanilla = self.gradient_descent_choose(current_parameter_vanilla, j, "Vanilla")
-                    loss_trace_vanilla.append(loss_vanilla)
-                    current_parameter_vanilla[0] = fmax(current_parameter_vanilla[0], 1e-8)
-
-                    loss_nesterov, diff_loss_nesterov, current_parameter_nesterov = self.gradient_descent_choose(current_parameter_nesterov, j, "Nesterov")
-                    loss_trace_nesterov.append(loss_nesterov)
-                    current_parameter_nesterov[0] = fmax(current_parameter_nesterov[0], 1e-8)
-
-                    loss_adam, diff_loss_adam, current_parameter_adam = self.gradient_descent_choose(current_parameter_adam, j, "Adam")
-                    loss_trace_adam.append(loss_adam)
-                    current_parameter_adam[0] = fmax(current_parameter_adam[0], 1e-8)
-
+                # update parameter and compute loss by a pre-defined optimization method
+                loss, diff_loss, current_parameter = self.optimization_function(self, current_parameter, j)
+                self.loss_trace.append(loss)
+                diff_loss_norm = np.linalg.norm(diff_loss)
 
                 # do the projection step
                 current_parameter[0] = fmax(current_parameter[0], 1e-8)
-                parameter_trace.append(current_parameter.tolist())
-                
-                diff_loss_norm = np.linalg.norm(diff_loss)
+                self.parameter_trace.append(current_parameter.tolist())
                 if print_flag:
                     print('iter:', j, ', loss:', loss_trace[-1], ', loss gradient norm:', diff_loss_norm)
+
             else:
                 print("The loss is less than threshold, stop the iteration.")
                 break
 
 
-        fig_comp = plt.figure()
+        # visualization of loss/log(loss) vs iterations
+        fig_loss = plt.figure()
+        print(self.optimization_method_str + " loss [max, min]: ", [self.loss_trace[0], self.loss_trace[-1]])
+
         # plot loss
-        ax_comp_1 = fig_comp.add_subplot(121)
-        iter_list = range(0, len(loss_trace))
-        loss_trace_plot_percentage = numpy.array(loss_trace) / loss_trace[0]
-        ax_comp_1.plot(iter_list, loss_trace_plot_percentage, linewidth=1, color="red", marker="*", label=self.optimization_method_str)
-        # for comparison only
-        if self.comparison_flag:
-            print("Vanilla lost", loss_trace_vanilla[-1])
-            print("Nesterov lost", loss_trace_nesterov[-1])
-            print("Adam lost", loss_trace_adam[-1])
-            loss_trace_plot_vanilla_percentage = numpy.array(loss_trace_vanilla) / loss_trace_vanilla[0]
-            loss_trace_plot_nesterov_percentage = numpy.array(loss_trace_nesterov) / loss_trace_nesterov[0]
-            loss_trace_plot_adam_percentage = numpy.array(loss_trace_adam) / loss_trace_adam[0]
-            ax_comp_1.plot(iter_list, loss_trace_plot_vanilla_percentage, linewidth=1, color="blue", marker="*", label="Vanilla")
-            ax_comp_1.plot(iter_list, loss_trace_plot_nesterov_percentage, linewidth=1, color="green", marker="*", label="Nesterov")
-            ax_comp_1.plot(iter_list, loss_trace_plot_adam_percentage, linewidth=1, color="pink", marker="*", label="Adam")
-        ax_comp_1.set_xlabel("Iterations")
-        ax_comp_1.set_ylabel("loss [percentage]")
-        ax_comp_1.legend(loc="upper right")
-        ax_comp_1.set_title('Loss Plot', fontweight ='bold')
+        ax_loss_1 = fig_loss.add_subplot(121)
+        iter_list = range(0, len(self.loss_trace))
+        loss_trace_plot_percentage = numpy.array(self.loss_trace) / self.loss_trace[0]
+        ax_loss_1.plot(iter_list, loss_trace_plot_percentage, linewidth=1, color="red", marker="*", label=self.optimization_method_str)
+        ax_loss_1.set_xlabel("Iterations")
+        ax_loss_1.set_ylabel("loss [percentage]")
+        ax_loss_1.legend(loc="upper right")
+        ax_loss_1.set_title('Loss Plot', fontweight ='bold')
 
         # plot log(loss)
-        ax_comp_2 = fig_comp.add_subplot(122)
-        ax_comp_2.plot(iter_list, np.log(loss_trace).tolist(), linewidth=1, color="red", marker="*", label=self.optimization_method_str)
-        # for comparison only
-        if self.comparison_flag:
-            ax_comp_2.plot(iter_list, np.log(loss_trace_vanilla).tolist(), linewidth=1, color="blue", marker="*", label="Vanilla")
-            ax_comp_2.plot(iter_list, np.log(loss_trace_nesterov).tolist(), linewidth=1, color="green", marker="*", label="Nesterov")
-            ax_comp_2.plot(iter_list, np.log(loss_trace_adam).tolist(), linewidth=1, color="pink", marker="*", label="Adam")
-        ax_comp_2.set_xlabel("Iterations")
-        ax_comp_2.set_ylabel("log(loss)")
-        ax_comp_2.legend(loc="upper right")
-        ax_comp_2.set_title('Log(Loss) Plot', fontweight ='bold')
-
+        ax_loss_2 = fig_loss.add_subplot(122)
+        ax_loss_2.plot(iter_list, np.log(self.loss_trace).tolist(), linewidth=1, color="red", marker="*", label=self.optimization_method_str)
+        ax_loss_2.set_xlabel("Iterations")
+        ax_loss_2.set_ylabel("log(loss)")
+        ax_loss_2.legend(loc="upper right")
+        ax_loss_2.set_title('Log(Loss) Plot', fontweight ='bold')
         plt.draw()
 
 
@@ -332,12 +298,12 @@ class QuadAlgorithm(object):
         opt_control_traj = opt_traj[:, self.oc.n_state : self.oc.n_state + self.oc.n_control]
 
         t1 = time.time()
-        print("Time used [min]: ", (t1-t0)/60)
+        print(self.optimization_method_str + " Time used [min]: ", (t1-t0)/60)
 
         if save_flag:
             # save the results
-            save_data = {'parameter_trace': parameter_trace,
-                        'loss_trace': loss_trace,
+            save_data = {'parameter_trace': self.parameter_trace,
+                        'loss_trace': self.loss_trace,
                         'learning_rate': self.learning_rate,
                         'waypoints': self.waypoints,
                         'time_grid': self.time_list_sparse,
@@ -374,142 +340,6 @@ class QuadAlgorithm(object):
             name_prefix_animation = os.getcwd() + '/trajectories/animation_' + time_prefix
             space_limits = [self.space_limit_x, self.space_limit_y, self.space_limit_z]
             self.env.play_animation(self.QuadPara.l, opt_state_traj_numpy, name_prefix_animation, space_limits, save_option=True)
-
-
-    def gradient_descent_choose(self, current_parameter, iter_idx_now: int, method_string: str):
-        """
-        Choose which gradient descent method to use.
-
-        Input:
-            current_parameter: a 1D numpy array for current parameter which needs to be optimized
-            iter_idx_now: the current iteration index, starting from 0.
-            method_string: "Vanilla", "Nesterov", "Adam", or "Nadam"
-        """
-
-        if method_string == "Vanilla":
-
-            # vanilla gradient descent method
-            time_grid, opt_sol = self.oc.cocSolver(self.ini_state, self.time_horizon, current_parameter)
-            auxsys_sol = self.oc.auxSysSolver(time_grid, opt_sol, current_parameter)
-            loss, diff_loss = self.getloss_pos_corrections(self.time_list_sparse, self.waypoints, opt_sol, auxsys_sol)
-            current_parameter = current_parameter - self.learning_rate * np.array(diff_loss)
-
-        elif method_string == "Nesterov":
-
-            # compute the lookahead parameter
-            parameter_momentum = current_parameter + self.mu_momentum * self.velocity_Nesterov
-            # update velocity vector for Nesterov
-            time_grid, opt_sol = self.oc.cocSolver(self.ini_state, self.time_horizon, parameter_momentum)
-            auxsys_sol = self.oc.auxSysSolver(time_grid, opt_sol, parameter_momentum)
-            # only need the gradient
-            loss, diff_loss = self.getloss_pos_corrections(self.time_list_sparse, self.waypoints, opt_sol, auxsys_sol)
-            self.velocity_Nesterov = self.mu_momentum * self.velocity_Nesterov - self.learning_rate * np.array(diff_loss)
-            # update the parameter
-            current_parameter = current_parameter + self.velocity_Nesterov
-
-            if self.true_loss_nesterov_flag:
-                # t0 = time.time()
-                # compute loss and gradient for new parameter
-                time_grid, opt_sol = self.oc.cocSolver(self.ini_state, self.time_horizon, current_parameter)
-                auxsys_sol = self.oc.auxSysSolver(time_grid, opt_sol, current_parameter)
-                loss, diff_loss = self.getloss_pos_corrections(self.time_list_sparse, self.waypoints, opt_sol, auxsys_sol)
-                # t1 = time.time()
-                # print("Check time [sec]: ", t1-t0)
-
-        elif method_string == "Adam":
-
-            # iter_idx_now starts from 0, but for Adam, idx stars from 1
-            idx = iter_idx_now + 1
-
-            time_grid, opt_sol = self.oc.cocSolver(self.ini_state, self.time_horizon, current_parameter)
-            auxsys_sol = self.oc.auxSysSolver(time_grid, opt_sol, current_parameter)
-            loss, diff_loss = self.getloss_pos_corrections(self.time_list_sparse, self.waypoints, opt_sol, auxsys_sol)
-            
-            # update velocity and momentum vectors
-            self.momentum_vector_adam = self.beta_1_adam * self.momentum_vector_adam + (1-self.beta_1_adam) * np.array(diff_loss)
-            self.velocity_vector_adam = self.beta_2_adam * self.velocity_vector_adam + (1-self.beta_2_adam) * np.power(diff_loss, 2)
-            self.momentum_vector_hat_adam = self.momentum_vector_adam / (1 - np.power(self.beta_1_adam, idx))
-            self.velocity_vector_hat_adam = self.velocity_vector_adam / (1 - np.power(self.beta_2_adam, idx))
-
-            # update the parameter
-            current_parameter = current_parameter - self.learning_rate * self.momentum_vector_hat_adam / (np.sqrt(self.velocity_vector_hat_adam) + self.epsilon_adam)
-
-        elif method_string == "Nadam":
-
-            # iter_idx_now starts from 0, but for Adam, idx stars from 1
-            idx = iter_idx_now + 1
-
-            time_grid, opt_sol = self.oc.cocSolver(self.ini_state, self.time_horizon, current_parameter)
-            auxsys_sol = self.oc.auxSysSolver(time_grid, opt_sol, current_parameter)
-            loss, diff_loss = self.getloss_pos_corrections(self.time_list_sparse, self.waypoints, opt_sol, auxsys_sol)
-            
-            # update velocity and momentum vectors
-            self.momentum_vector_nadam = self.beta_1_nadam * self.momentum_vector_nadam + (1-self.beta_1_nadam) * np.array(diff_loss)
-            self.velocity_vector_nadam = self.beta_2_nadam * self.velocity_vector_nadam + (1-self.beta_2_nadam) * np.power(diff_loss, 2)
-            self.momentum_vector_hat_nadam = self.momentum_vector_nadam / (1 - np.power(self.beta_1_nadam, idx))
-            self.velocity_vector_hat_nadam = self.velocity_vector_nadam / (1 - np.power(self.beta_2_nadam, idx))
-
-            # update the parameter
-            current_parameter = current_parameter - self.learning_rate * \
-                ( self.beta_1_nadam*self.momentum_vector_hat_nadam + ((1-self.beta_1_nadam)/(1-np.power(self.beta_1_nadam, idx))) * np.array(diff_loss) ) \
-                / (np.sqrt(self.velocity_vector_hat_nadam) + self.epsilon_nadam)
-
-        else:
-            raise Exception("Wrong type of gradient descent method, support Vanilla, Nesterov, Adam, and Nadam!")
-
-        return loss, diff_loss, current_parameter
-
-
-    def getloss_pos_corrections(self, time_grid, target_waypoints, opt_sol, auxsys_sol):
-        loss = 0
-        diff_loss = np.zeros(self.oc.n_auxvar)
-
-        for k, t in enumerate(time_grid):
-            # solve loss
-            target_waypoint = target_waypoints[k, :]
-            target_position = target_waypoint[0:3]
-            current_position = self.interface_pos_fn(opt_sol(t)[0:self.oc.n_state]).full().flatten()
-
-            loss += np.linalg.norm(target_position - current_position) ** 2
-            # solve gradient by chain rule
-            dl_dpos = current_position - target_position
-            dpos_dx = self.diff_interface_pos_fn(opt_sol(t)[0:self.oc.n_state]).full()
-            dxpos_dp = auxsys_sol(t)[0:self.oc.n_state * self.oc.n_auxvar].reshape((self.oc.n_state, self.oc.n_auxvar))
-
-            dl_dp = np.matmul(np.matmul(dl_dpos, dpos_dx), dxpos_dp)
-            diff_loss += dl_dp
-
-        return loss, diff_loss
-
-    
-    def getloss_corrections(self, time_grid, target_waypoints, opt_sol, auxsys_sol):
-        loss = 0
-        diff_loss = np.zeros(self.oc.n_auxvar)
-
-        for k, t in enumerate(time_grid):
-            # solve loss
-            target_waypoint = target_waypoints[k, :]
-            target_position = target_waypoint[0:3]
-            target_orientation = target_waypoint[3:]
-            current_position = self.interface_pos_fn(opt_sol(t)[0:oc.n_state]).full().flatten()
-            current_orientation = self.interface_ori_fn(opt_sol(t)[0:oc.n_state]).full().flatten()
-
-            loss += np.linalg.norm(target_position - current_position) ** 2 + \
-                np.linalg.norm(target_orientation - current_orientation) ** 2
-            # solve gradient by chain rule
-            dl_dpos = current_position - target_position
-            dpos_dx = self.diff_interface_pos_fn(opt_sol(t)[0:self.oc.n_state]).full()
-            dxpos_dp = auxsys_sol(t)[0:self.oc.n_state * self.oc.n_auxvar].reshape((self.oc.n_state, self.oc.n_auxvar))
-
-            dl_dori = current_orientation - target_orientation
-            dori_dx = self.diff_interface_ori_fn(opt_sol(t)[0:self.oc.n_state]).full()
-            dxori_dp = auxsys_sol(t)[0:self.oc.n_state * self.oc.n_auxvar].reshape((self.oc.n_state, self.oc.n_auxvar))
-
-            dl_dp = np.matmul(np.matmul(dl_dpos, dpos_dx), dxpos_dp) + \
-                np.matmul(np.matmul(dl_dori, dori_dx),dxori_dp)
-            diff_loss += dl_dp
-
-        return loss, diff_loss
 
 
     def plot_opt_trajectory(self, posi_velo_traj_numpy, QuadInitialCondition: QuadStates, QuadDesiredStates: QuadStates, SparseInput: DemoSparse):
@@ -600,3 +430,195 @@ class QuadAlgorithm(object):
         self.ax_3d.set_xlim3d([x_middle - plot_radius, x_middle + plot_radius])
         self.ax_3d.set_ylim3d([y_middle - plot_radius, y_middle + plot_radius])
         self.ax_3d.set_zlim3d([z_middle - plot_radius, z_middle + plot_radius])
+
+
+    def Vanilla_gradient_descent(self, current_parameter):
+        """
+        Vanilla gradient descent method.
+
+        Input:
+            current_parameter: a 1D numpy array for current parameter which needs to be optimized
+        """
+
+        time_grid, opt_sol = self.oc.cocSolver(self.ini_state, self.time_horizon, current_parameter)
+        auxsys_sol = self.oc.auxSysSolver(time_grid, opt_sol, current_parameter)
+        loss, diff_loss = self.getloss_pos_corrections(self.time_list_sparse, self.waypoints, opt_sol, auxsys_sol)
+        current_parameter = current_parameter - self.learning_rate * np.array(diff_loss)
+        return loss, diff_loss, current_parameter
+
+
+    def Nesterov(self, current_parameter):
+        """
+        Nesterov Accelerated Gradient method (NAG).
+
+        Input:
+            current_parameter: a 1D numpy array for current parameter which needs to be optimized
+        """
+
+        # compute the lookahead parameter
+        parameter_momentum = current_parameter + self.mu_momentum * self.velocity_Nesterov
+        # update velocity vector for Nesterov
+        time_grid, opt_sol = self.oc.cocSolver(self.ini_state, self.time_horizon, parameter_momentum)
+        auxsys_sol = self.oc.auxSysSolver(time_grid, opt_sol, parameter_momentum)
+        # only need the gradient
+        loss, diff_loss = self.getloss_pos_corrections(self.time_list_sparse, self.waypoints, opt_sol, auxsys_sol)
+        self.velocity_Nesterov = self.mu_momentum * self.velocity_Nesterov - self.learning_rate * np.array(diff_loss)
+        # update the parameter
+        current_parameter = current_parameter + self.velocity_Nesterov
+        if self.actual_loss_print_nesterov_flag:
+            # t0 = time.time()
+            # compute loss and gradient for new parameter
+            time_grid, opt_sol = self.oc.cocSolver(self.ini_state, self.time_horizon, current_parameter)
+            auxsys_sol = self.oc.auxSysSolver(time_grid, opt_sol, current_parameter)
+            loss, diff_loss = self.getloss_pos_corrections(self.time_list_sparse, self.waypoints, opt_sol, auxsys_sol)
+            # t1 = time.time()
+            # print("Check time [sec]: ", t1-t0)
+        return loss, diff_loss, current_parameter
+
+
+    def Adam(self, current_parameter, iter_idx_now: int):
+        """
+        Adaptive Moment Estimation method (Adam).
+
+        Input:
+            current_parameter: a 1D numpy array for current parameter which needs to be optimized
+            iter_idx_now: the current iteration index, starting from 0.
+        """
+
+        # iter_idx_now starts from 0, but for Adam, idx stars from 1
+        idx = iter_idx_now + 1
+        # solve the loss and gradient
+        time_grid, opt_sol = self.oc.cocSolver(self.ini_state, self.time_horizon, current_parameter)
+        auxsys_sol = self.oc.auxSysSolver(time_grid, opt_sol, current_parameter)
+        loss, diff_loss = self.getloss_pos_corrections(self.time_list_sparse, self.waypoints, opt_sol, auxsys_sol)
+        # update velocity and momentum vectors
+        self.momentum_vector_adam = self.beta_1_adam * self.momentum_vector_adam + (1-self.beta_1_adam) * np.array(diff_loss)
+        self.velocity_vector_adam = self.beta_2_adam * self.velocity_vector_adam + (1-self.beta_2_adam) * np.power(diff_loss, 2)
+        self.momentum_vector_hat_adam = self.momentum_vector_adam / (1 - np.power(self.beta_1_adam, idx))
+        self.velocity_vector_hat_adam = self.velocity_vector_adam / (1 - np.power(self.beta_2_adam, idx))
+        # update the parameter
+        current_parameter = current_parameter - self.learning_rate * self.momentum_vector_hat_adam / (np.sqrt(self.velocity_vector_hat_adam) + self.epsilon_adam)
+        return loss, diff_loss, current_parameter
+
+
+    def Nadam(self, current_parameter, iter_idx_now: int):
+        """
+        Nesterov-accelerated Adaptive Moment Estimation method (Nadam).
+
+        Input:
+            current_parameter: a 1D numpy array for current parameter which needs to be optimized
+            iter_idx_now: the current iteration index, starting from 0.
+        """
+
+        # iter_idx_now starts from 0, but for Adam, idx stars from 1
+        idx = iter_idx_now + 1
+
+        time_grid, opt_sol = self.oc.cocSolver(self.ini_state, self.time_horizon, current_parameter)
+        auxsys_sol = self.oc.auxSysSolver(time_grid, opt_sol, current_parameter)
+        loss, diff_loss = self.getloss_pos_corrections(self.time_list_sparse, self.waypoints, opt_sol, auxsys_sol)
+        
+        # update velocity and momentum vectors
+        self.momentum_vector_nadam = self.beta_1_nadam * self.momentum_vector_nadam + (1-self.beta_1_nadam) * np.array(diff_loss)
+        self.velocity_vector_nadam = self.beta_2_nadam * self.velocity_vector_nadam + (1-self.beta_2_nadam) * np.power(diff_loss, 2)
+        self.momentum_vector_hat_nadam = self.momentum_vector_nadam / (1 - np.power(self.beta_1_nadam, idx))
+        self.velocity_vector_hat_nadam = self.velocity_vector_nadam / (1 - np.power(self.beta_2_nadam, idx))
+
+        # update the parameter
+        current_parameter = current_parameter - self.learning_rate * \
+            ( self.beta_1_nadam*self.momentum_vector_hat_nadam + ((1-self.beta_1_nadam)/(1-np.power(self.beta_1_nadam, idx))) * np.array(diff_loss) ) \
+            / (np.sqrt(self.velocity_vector_hat_nadam) + self.epsilon_nadam)
+        return loss, diff_loss, current_parameter
+
+
+    def plot_opt_method_comparison(self, loss_trace_comparison, label_list):
+        """
+        Plot multiple loss trajectory based on different optimization methods.
+
+        Input:
+            loss_trace_comparison: a 2D list, each sub-list is a loss trajectory
+            label_list: a 1D list, each element is a string for method name
+        """
+
+        iter_list = range(0, len(loss_trace_comparison[0]))
+        fig_comp = plt.figure()
+        # plot loss
+        ax_comp_1 = fig_comp.add_subplot(121)
+        for idx in range (0, len(loss_trace_comparison)):
+            loss_trace_percentage = numpy.array(loss_trace_comparison[idx]) / loss_trace_comparison[idx][0]
+            ax_comp_1.plot(iter_list, loss_trace_percentage, linewidth=1, marker="*", label=label_list[idx])
+            print(label_list[idx] + " loss [max, min]: ", [loss_trace_comparison[idx][0], loss_trace_comparison[idx][-1]])
+        ax_comp_1.set_xlabel("Iterations")
+        ax_comp_1.set_ylabel("loss [percentage]")
+        ax_comp_1.legend(loc="upper right")
+        ax_comp_1.set_title('Loss Plot', fontweight ='bold')
+
+        # plot log(loss)
+        ax_comp_2 = fig_comp.add_subplot(122)
+        for idx in range (0, len(loss_trace_comparison)):
+            ax_comp_2.plot(iter_list, np.log(loss_trace_comparison[idx]).tolist(), linewidth=1, marker="*", label=label_list[idx])
+            print(label_list[idx] + " loss [max, min]: ", [loss_trace_comparison[idx][0], loss_trace_comparison[idx][-1]])
+        ax_comp_2.set_xlabel("Iterations")
+        ax_comp_2.set_ylabel("log(loss)")
+        ax_comp_2.legend(loc="upper right")
+        ax_comp_2.set_title('Log(Loss) Plot', fontweight ='bold')
+        plt.show()
+
+
+    def getloss_pos_corrections(self, time_grid, target_waypoints, opt_sol, auxsys_sol):
+        """
+        Compute the loss and loss gradient based on the positions of waypoints.
+        """
+
+        loss = 0
+        diff_loss = np.zeros(self.oc.n_auxvar)
+
+        for k, t in enumerate(time_grid):
+            # solve loss
+            target_waypoint = target_waypoints[k, :]
+            target_position = target_waypoint[0:3]
+            current_position = self.interface_pos_fn(opt_sol(t)[0:self.oc.n_state]).full().flatten()
+
+            loss += np.linalg.norm(target_position - current_position) ** 2
+            # solve gradient by chain rule
+            dl_dpos = current_position - target_position
+            dpos_dx = self.diff_interface_pos_fn(opt_sol(t)[0:self.oc.n_state]).full()
+            dxpos_dp = auxsys_sol(t)[0:self.oc.n_state * self.oc.n_auxvar].reshape((self.oc.n_state, self.oc.n_auxvar))
+
+            dl_dp = np.matmul(np.matmul(dl_dpos, dpos_dx), dxpos_dp)
+            diff_loss += dl_dp
+
+        return loss, diff_loss
+
+    
+    def getloss_corrections(self, time_grid, target_waypoints, opt_sol, auxsys_sol):
+        """
+        Compute the loss and loss gradient based on the positions and orientations of waypoints.
+        """
+
+        loss = 0
+        diff_loss = np.zeros(self.oc.n_auxvar)
+
+        for k, t in enumerate(time_grid):
+            # solve loss
+            target_waypoint = target_waypoints[k, :]
+            target_position = target_waypoint[0:3]
+            target_orientation = target_waypoint[3:]
+            current_position = self.interface_pos_fn(opt_sol(t)[0:oc.n_state]).full().flatten()
+            current_orientation = self.interface_ori_fn(opt_sol(t)[0:oc.n_state]).full().flatten()
+
+            loss += np.linalg.norm(target_position - current_position) ** 2 + \
+                np.linalg.norm(target_orientation - current_orientation) ** 2
+            # solve gradient by chain rule
+            dl_dpos = current_position - target_position
+            dpos_dx = self.diff_interface_pos_fn(opt_sol(t)[0:self.oc.n_state]).full()
+            dxpos_dp = auxsys_sol(t)[0:self.oc.n_state * self.oc.n_auxvar].reshape((self.oc.n_state, self.oc.n_auxvar))
+
+            dl_dori = current_orientation - target_orientation
+            dori_dx = self.diff_interface_ori_fn(opt_sol(t)[0:self.oc.n_state]).full()
+            dxori_dp = auxsys_sol(t)[0:self.oc.n_state * self.oc.n_auxvar].reshape((self.oc.n_state, self.oc.n_auxvar))
+
+            dl_dp = np.matmul(np.matmul(dl_dpos, dpos_dx), dxpos_dp) + \
+                np.matmul(np.matmul(dl_dori, dori_dx),dxori_dp)
+            diff_loss += dl_dp
+
+        return loss, diff_loss
