@@ -101,6 +101,20 @@ class QuadAlgorithm(object):
         self.diff_interface_pos_fn = Function('diff_interface', [self.oc.state], [jacobian(self.oc.state[0:3], self.oc.state)])
         self.diff_interface_ori_fn = Function('diff_interface', [self.oc.state], [jacobian(self.oc.state[6:10], self.oc.state)])
 
+        # initialize some variables for optimization methods, self.oc.n_auxvar is the length of optimization parameter
+        # initialization for Nesterov
+        self.velocity_Nesterov = np.array([0] * self.oc.n_auxvar)
+        # initialization for Adam
+        self.momentum_vector_adam = np.array([0] * self.oc.n_auxvar)
+        self.velocity_vector_adam = np.array([0] * self.oc.n_auxvar)
+        self.momentum_vector_hat_adam = np.array([0] * self.oc.n_auxvar)
+        self.velocity_vector_hat_adam = np.array([0] * self.oc.n_auxvar)
+        # initialization for Nadam
+        self.momentum_vector_nadam = np.array([0] * self.oc.n_auxvar)
+        self.velocity_vector_nadam = np.array([0] * self.oc.n_auxvar)
+        self.momentum_vector_hat_nadam = np.array([0] * self.oc.n_auxvar)
+        self.velocity_vector_hat_nadam = np.array([0] * self.oc.n_auxvar)
+
 
     def load_optimization_function(self, para_input: dict):
         """
@@ -130,43 +144,25 @@ class QuadAlgorithm(object):
         # the optimization method
         self.optimization_method_str = para_input["method"]
 
-        print("check!!!!")
-        print(len(vertcat(SX.sym('beta'), self.env.cost_auxvar)))
-
-        # need to revise it!!!!!!!!!!!!
-        len_para = 7
-
         if (para_input["method"] == "Vanilla"):
-            self.optimization_function = lambda self, theta, idx: self.Vanilla_gradient_descent(self, theta)
+            self.optimization_function = lambda self, theta, idx: self.Vanilla_gradient_descent(theta)
 
         elif (para_input["method"] == "Nesterov"):
             self.mu_momentum = para_input["mu"]
             self.actual_loss_print_nesterov_flag = para_input["true_loss_print_flag"]
-            self.optimization_function = lambda self, theta, idx: self.Nesterov(self, theta)
-            # initialization for Nesterov
-            self.velocity_Nesterov = np.array([0] * len_para)
+            self.optimization_function = lambda self, theta, idx: self.Nesterov(theta)
 
         elif (para_input["method"] == "Adam"):
             self.beta_1_adam = para_input["beta_1"]
             self.beta_2_adam = para_input["beta_2"]
             self.epsilon_adam = para_input["epsilon"]
-            self.optimization_function = lambda self, theta, idx: self.Adam(self, theta, idx)
-            # initialization for Adam
-            self.momentum_vector_adam = np.array([0] * len_para)
-            self.velocity_vector_adam = np.array([0] * len_para)
-            self.momentum_vector_hat_adam = np.array([0] * len_para)
-            self.velocity_vector_hat_adam = np.array([0] * len_para)
+            self.optimization_function = lambda self, theta, idx: self.Adam(theta, idx)
 
         elif (para_input["method"] == "Nadam"):
             self.beta_1_nadam = para_input["beta_1"]
             self.beta_2_nadam = para_input["beta_2"]
             self.epsilon_nadam = para_input["epsilon"]
-            self.optimization_function = lambda self, theta, idx: self.Nadam(self, theta, idx)
-            # initialization for Nadam
-            self.momentum_vector_nadam = np.array([0] * len_para)
-            self.velocity_vector_nadam = np.array([0] * len_para)
-            self.momentum_vector_hat_nadam = np.array([0] * len_para)
-            self.velocity_vector_hat_nadam = np.array([0] * len_para)
+            self.optimization_function = lambda self, theta, idx: self.Nadam(theta, idx)
 
         else:
             raise Exception("Wrong optimization method type!")
@@ -181,7 +177,7 @@ class QuadAlgorithm(object):
         print("Algorithm is running now.")
         # set the obstacles for plotting
         self.ObsList = ObsList
-        # set the goal states
+        # set the goal states, initialize variables for optimization methods
         self.settings(QuadDesiredStates)
         # set initial condition
         self.ini_state = QuadInitialCondition.position + QuadInitialCondition.velocity + \
@@ -231,7 +227,7 @@ class QuadAlgorithm(object):
                 current_parameter[0] = fmax(current_parameter[0], 1e-8)
                 self.parameter_trace.append(current_parameter.tolist())
                 if print_flag:
-                    print('iter:', j, ', loss:', loss_trace[-1], ', loss gradient norm:', diff_loss_norm)
+                    print('iter:', j, ', loss:', self.loss_trace[-1], ', loss gradient norm:', diff_loss_norm)
 
             else:
                 print("The loss is less than threshold, stop the iteration.")
@@ -482,7 +478,7 @@ class QuadAlgorithm(object):
 
         Input:
             current_parameter: a 1D numpy array for current parameter which needs to be optimized
-            iter_idx_now: the current iteration index, starting from 0.
+            iter_idx_now: the current iteration index, starting from 0
         """
 
         # iter_idx_now starts from 0, but for Adam, idx stars from 1
@@ -510,7 +506,7 @@ class QuadAlgorithm(object):
             iter_idx_now: the current iteration index, starting from 0.
         """
 
-        # iter_idx_now starts from 0, but for Adam, idx stars from 1
+        # iter_idx_now starts from 0, but for Nadam, idx stars from 1
         idx = iter_idx_now + 1
 
         time_grid, opt_sol = self.oc.cocSolver(self.ini_state, self.time_horizon, current_parameter)

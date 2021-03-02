@@ -5,6 +5,7 @@ import time
 sys.path.append(os.getcwd()+'/CPDP')
 sys.path.append(os.getcwd()+'/JinEnv')
 sys.path.append(os.getcwd()+'/lib')
+import copy
 import time
 import json
 import numpy as np
@@ -62,10 +63,10 @@ if __name__ == "__main__":
     Solver = QuadAlgorithm(config_data, QuadParaInput, n_grid)
 
     # load the optimization method for learning iteration
-    para_vanilla = {"learning_rate": 0.01, "iter_num": 5, "method": "Vanilla"} # This is for Vanilla gradient descent
-    para_nesterov = {"learning_rate": 0.01, "iter_num": 5, "method": "Nesterov", "mu": 0.9, "true_loss_print_flag": True} # This is for Nesterov
-    para_adam = {"learning_rate": 0.01, "iter_num": 5, "method": "Adam", "beta_1": 0.9, "beta_2": 0.999, "epsilon": 1e-8} # This is for Adam
-    para_nadam = {"learning_rate": 0.01, "iter_num": 5, "method": "Nadam", "beta_1": 0.9, "beta_2": 0.999, "epsilon": 1e-8} # This is for Nadam
+    para_vanilla = {"learning_rate": 0.01, "iter_num": 100, "method": "Vanilla"} # This is for Vanilla gradient descent
+    para_nesterov = {"learning_rate": 0.01, "iter_num": 100, "method": "Nesterov", "mu": 0.9, "true_loss_print_flag": True} # This is for Nesterov
+    para_adam = {"learning_rate": 0.01, "iter_num": 100, "method": "Adam", "beta_1": 0.9, "beta_2": 0.999, "epsilon": 1e-8} # This is for Adam
+    para_nadam = {"learning_rate": 0.01, "iter_num": 100, "method": "Nadam", "beta_1": 0.9, "beta_2": 0.999, "epsilon": 1e-8} # This is for Nadam
     
     loss_trace_comparison = []
     label_list = []
@@ -74,28 +75,28 @@ if __name__ == "__main__":
     Solver.run(QuadInitialCondition, QuadDesiredStates, SparseInput, ObsList, print_flag=True, save_flag=False)
     loss_trace_vanilla = copy.deepcopy(Solver.loss_trace)
     loss_trace_comparison.append(loss_trace_vanilla)
-    label_list.append(self.optimization_method_str)
+    label_list.append(para_vanilla["method"])
 
     # Nesterov
     Solver.load_optimization_function(para_nesterov)
     Solver.run(QuadInitialCondition, QuadDesiredStates, SparseInput, ObsList, print_flag=True, save_flag=False)
     loss_trace_nesterov = copy.deepcopy(Solver.loss_trace)
     loss_trace_comparison.append(loss_trace_nesterov)
-    label_list.append(self.optimization_method_str)
+    label_list.append(para_nesterov["method"])
 
     # Adam
     Solver.load_optimization_function(para_adam)
     Solver.run(QuadInitialCondition, QuadDesiredStates, SparseInput, ObsList, print_flag=True, save_flag=False)
     loss_trace_adam = copy.deepcopy(Solver.loss_trace)
     loss_trace_comparison.append(loss_trace_adam)
-    label_list.append(self.optimization_method_str)
+    label_list.append(para_adam["method"])
 
     # Nadam
     Solver.load_optimization_function(para_nadam)
     Solver.run(QuadInitialCondition, QuadDesiredStates, SparseInput, ObsList, print_flag=True, save_flag=False)
     loss_trace_nadam = copy.deepcopy(Solver.loss_trace)
-    loss_trace_comparison.append(loss_trace_nadam, label_list)
-    label_list.append(self.optimization_method_str)
+    loss_trace_comparison.append(loss_trace_nadam)
+    label_list.append(para_nadam["method"])
 
     # plot the comparison
     Solver.plot_opt_method_comparison(loss_trace_comparison, label_list)
