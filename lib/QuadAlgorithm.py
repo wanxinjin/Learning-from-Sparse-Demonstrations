@@ -38,6 +38,9 @@ class QuadAlgorithm(object):
     beta_1_adam: float # parameter beta_1 for Adam, typically 0.9
     beta_2_adam: float # parameter beta_2 for Adam, typically 0.999
     epsilon_adam: float # parameter epsilon for Adam, typically 1e-8
+    beta_1_nadam: float # parameter beta_1 for Nadam, typically 0.9
+    beta_2_nadam: float # parameter beta_2 for Nadam, typically 0.999
+    epsilon_nadam: float # parameter epsilon for Nadam, typically 1e-8
 
 
     def __init__(self, config_data, QuadParaInput: QuadPara, n_grid: int):
@@ -96,9 +99,9 @@ class QuadAlgorithm(object):
         self.diff_interface_ori_fn = Function('diff_interface', [self.oc.state], [jacobian(self.oc.state[6:10], self.oc.state)])
 
 
-    def load_optimization_method(self, para_input: dict):
+    def load_optimization_parameter(self, para_input: dict):
         """
-        Load the optimization method. Now support Vanilla gradient descent, Nesterov Momentum, and Adam.
+        Load the optimization parameter. Now support Vanilla gradient descent, Nesterov Momentum, Adam, and Nadam.
 
         Input:
             para_input: a dictionary which includes the parameters.
@@ -112,6 +115,9 @@ class QuadAlgorithm(object):
 
             # This is for Adam
             para_optimization_dict = {"learning_rate": 0.01, "iter_num": 100, "method": "Adam", "beta_1": 0.9, "beta_2": 0.999, "epsilon": 1e-8}
+            
+            # This is for Nadam
+            para_optimization_dict = {"learning_rate": 0.01, "iter_num": 100, "method": "Nadam", "beta_1": 0.9, "beta_2": 0.999, "epsilon": 1e-8}
         """
 
         # learning rate
@@ -129,6 +135,11 @@ class QuadAlgorithm(object):
             self.beta_1_adam = para_input["beta_1"]
             self.beta_2_adam = para_input["beta_2"]
             self.epsilon_adam = para_input["epsilon"]
+        elif (para_input["method"] == "Nadam"):
+            self.optimization_method_str = para_input["method"]
+            self.beta_1_nadam = para_input["beta_1"]
+            self.beta_2_nadam = para_input["beta_2"]
+            self.epsilon_nadam = para_input["epsilon"]
         else:
             raise Exception("Wrong optimization method type!")
 
@@ -186,18 +197,29 @@ class QuadAlgorithm(object):
         self.momentum_vector_hat_adam = np.array([0] * current_parameter.shape[0])
         self.velocity_vector_hat_adam = np.array([0] * current_parameter.shape[0])
 
+        # initialization for Nadam
+        self.momentum_vector_nadam = np.array([0] * current_parameter.shape[0])
+        self.velocity_vector_nadam = np.array([0] * current_parameter.shape[0])
+        self.momentum_vector_hat_nadam = np.array([0] * current_parameter.shape[0])
+        self.velocity_vector_hat_nadam = np.array([0] * current_parameter.shape[0])
+
         # for comparison only
         loss_trace_vanilla = []
         current_parameter_vanilla = copy.deepcopy(current_parameter)
         loss_trace_nesterov = []
         current_parameter_nesterov = copy.deepcopy(current_parameter)
+        loss_trace_adam = []
+        current_parameter_adam = copy.deepcopy(current_parameter)
         # True to run comparison between two optimization methods for learning process
         self.comparison_flag = True
         # True to compute actual loss and gradient of Nesterov Momentum method
         self.true_loss_nesterov_flag = True
         if self.comparison_flag:
-            print("Overwrite self.mu_momentum!")
+            print("Overwrite parameters!")
             self.mu_momentum = 0.9
+            self.beta_1_adam = self.beta_1_nadam
+            self.beta_2_adam = self.beta_2_nadam
+            self.epsilon_adam = self.epsilon_nadam
 
 
         loss = 100
@@ -218,6 +240,10 @@ class QuadAlgorithm(object):
                     loss_nesterov, diff_loss_nesterov, current_parameter_nesterov = self.gradient_descent_choose(current_parameter_nesterov, j, "Nesterov")
                     loss_trace_nesterov.append(loss_nesterov)
                     current_parameter_nesterov[0] = fmax(current_parameter_nesterov[0], 1e-8)
+
+                    loss_adam, diff_loss_adam, current_parameter_adam = self.gradient_descent_choose(current_parameter_adam, j, "Adam")
+                    loss_trace_adam.append(loss_adam)
+                    current_parameter_adam[0] = fmax(current_parameter_adam[0], 1e-8)
 
 
                 # do the projection step
@@ -242,10 +268,13 @@ class QuadAlgorithm(object):
         if self.comparison_flag:
             print("Vanilla lost", loss_trace_vanilla[-1])
             print("Nesterov lost", loss_trace_nesterov[-1])
+            print("Adam lost", loss_trace_adam[-1])
             loss_trace_plot_vanilla_percentage = numpy.array(loss_trace_vanilla) / loss_trace_vanilla[0]
             loss_trace_plot_nesterov_percentage = numpy.array(loss_trace_nesterov) / loss_trace_nesterov[0]
+            loss_trace_plot_adam_percentage = numpy.array(loss_trace_adam) / loss_trace_adam[0]
             ax_comp_1.plot(iter_list, loss_trace_plot_vanilla_percentage, linewidth=1, color="blue", marker="*", label="Vanilla")
             ax_comp_1.plot(iter_list, loss_trace_plot_nesterov_percentage, linewidth=1, color="green", marker="*", label="Nesterov")
+            ax_comp_1.plot(iter_list, loss_trace_plot_adam_percentage, linewidth=1, color="pink", marker="*", label="Adam")
         ax_comp_1.set_xlabel("Iterations")
         ax_comp_1.set_ylabel("loss [percentage]")
         ax_comp_1.legend(loc="upper right")
@@ -258,6 +287,7 @@ class QuadAlgorithm(object):
         if self.comparison_flag:
             ax_comp_2.plot(iter_list, np.log(loss_trace_vanilla).tolist(), linewidth=1, color="blue", marker="*", label="Vanilla")
             ax_comp_2.plot(iter_list, np.log(loss_trace_nesterov).tolist(), linewidth=1, color="green", marker="*", label="Nesterov")
+            ax_comp_2.plot(iter_list, np.log(loss_trace_adam).tolist(), linewidth=1, color="pink", marker="*", label="Adam")
         ax_comp_2.set_xlabel("Iterations")
         ax_comp_2.set_ylabel("log(loss)")
         ax_comp_2.legend(loc="upper right")
@@ -353,7 +383,7 @@ class QuadAlgorithm(object):
         Input:
             current_parameter: a 1D numpy array for current parameter which needs to be optimized
             iter_idx_now: the current iteration index, starting from 0.
-            method_string: "Vanilla", "Nesterov" or "Adam"
+            method_string: "Vanilla", "Nesterov", "Adam", or "Nadam"
         """
 
         if method_string == "Vanilla":
@@ -404,8 +434,28 @@ class QuadAlgorithm(object):
             # update the parameter
             current_parameter = current_parameter - self.learning_rate * self.momentum_vector_hat_adam / (np.sqrt(self.velocity_vector_hat_adam) + self.epsilon_adam)
 
+        elif method_string == "Nadam":
+
+            # iter_idx_now starts from 0, but for Adam, idx stars from 1
+            idx = iter_idx_now + 1
+
+            time_grid, opt_sol = self.oc.cocSolver(self.ini_state, self.time_horizon, current_parameter)
+            auxsys_sol = self.oc.auxSysSolver(time_grid, opt_sol, current_parameter)
+            loss, diff_loss = self.getloss_pos_corrections(self.time_list_sparse, self.waypoints, opt_sol, auxsys_sol)
+            
+            # update velocity and momentum vectors
+            self.momentum_vector_nadam = self.beta_1_nadam * self.momentum_vector_nadam + (1-self.beta_1_nadam) * np.array(diff_loss)
+            self.velocity_vector_nadam = self.beta_2_nadam * self.velocity_vector_nadam + (1-self.beta_2_nadam) * np.power(diff_loss, 2)
+            self.momentum_vector_hat_nadam = self.momentum_vector_nadam / (1 - np.power(self.beta_1_nadam, idx))
+            self.velocity_vector_hat_nadam = self.velocity_vector_nadam / (1 - np.power(self.beta_2_nadam, idx))
+
+            # update the parameter
+            current_parameter = current_parameter - self.learning_rate * \
+                ( self.beta_1_nadam*self.momentum_vector_hat_nadam + ((1-self.beta_1_nadam)/(1-np.power(self.beta_1_nadam, idx))) * np.array(diff_loss) ) \
+                / (np.sqrt(self.velocity_vector_hat_nadam) + self.epsilon_nadam)
+
         else:
-            raise Exception("Wrong type of gradient descent method, only support Vanilla or Nesterov!")
+            raise Exception("Wrong type of gradient descent method, support Vanilla, Nesterov, Adam, and Nadam!")
 
         return loss, diff_loss, current_parameter
 
