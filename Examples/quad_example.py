@@ -60,11 +60,13 @@ if __name__ == "__main__":
     Solver = QuadAlgorithm(config_data, QuadParaInput, n_grid)
 
     # load the optimization method for learning iteration
-    # para_optimization_dict = {"learning_rate": 0.01, "iter_num": 10, "method": "Vanilla"} # This is for Vanilla gradient descent
-    para_optimization_dict = {"learning_rate": 0.01, "iter_num": 10, "method": "Nesterov", "mu": 0.9, "true_loss_print_flag": True} # This is for Nesterov Momentum
-    # para_optimization_dict = {"learning_rate": 0.01, "iter_num": 100, "method": "Adam", "beta_1": 0.9, "beta_2": 0.999, "epsilon": 1e-8} # This is for Adam
-    Solver.load_optimization_function(para_optimization_dict)
+    # para_dict = {"learning_rate": 0.01, "iter_num": 30, "method": "Vanilla"} # This is for Vanilla gradient descent
+    para_dict = {"learning_rate": 0.01, "iter_num": 50, "method": "Nesterov", "mu": 0.9, "true_loss_print_flag": True} # This is for Nesterov Momentum
+    # para_dict = {"learning_rate": 0.01, "iter_num": 50, "method": "Adam", "beta_1": 0.9, "beta_2": 0.999, "epsilon": 1e-8} # This is for Adam
+    # para_dict = {"learning_rate": 0.01, "iter_num": 50, "method": "Nadam", "beta_1": 0.9, "beta_2": 0.999, "epsilon": 1e-8} # This is for Nadam
+    
+    Solver.load_optimization_function(para_dict)
 
     # solve it
-    Solver.run(QuadInitialCondition, QuadDesiredStates, SparseInput, ObsList=[], print_flag=True, save_flag=True)
+    Solver.run(QuadInitialCondition, QuadDesiredStates, SparseInput, ObsList, print_flag=True, save_flag=True)
 
