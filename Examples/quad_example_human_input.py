@@ -27,7 +27,7 @@ if __name__ == "__main__":
     config_data = json.load(json_file)
 
     # generate random obstacles
-    num_obs = 30 # number of obstacles
+    num_obs = 20 # number of obstacles
     size_list=[0.2, 0.3, 0.4] # size lenth, width, height in x,y,z axis
     ObsList = generate_random_obs(num_obs, size_list, config_data)
 
@@ -63,8 +63,8 @@ if __name__ == "__main__":
 
     # load the optimization method for learning iteration
     # para_optimization_dict = {"learning_rate": 0.01, "iter_num": 30, "method": "Vanilla"} # This is for Vanilla gradient descent
-    para_optimization_dict = {"learning_rate": 0.01, "iter_num": 30, "method": "Nesterov", "mu": 0.9} # This is for Nesterov Momentum
-    # para_optimization_dict = {"learning_rate": 0.01, "iter_num": 30, "method": "Adam", "beta_1": 0.9, "beta_2": 0.999, "epsilon": 1e-8} # This is for Adam
+    # para_optimization_dict = {"learning_rate": 0.01, "iter_num": 30, "method": "Nesterov", "mu": 0.9} # This is for Nesterov Momentum
+    para_optimization_dict = {"learning_rate": 0.01, "iter_num": 50, "method": "Adam", "beta_1": 0.9, "beta_2": 0.999, "epsilon": 1e-8} # This is for Adam
     Solver.load_optimization_method(para_optimization_dict)
 
     # solve it
