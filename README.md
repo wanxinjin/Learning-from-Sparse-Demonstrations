@@ -37,6 +37,9 @@ use of the PDP package or JinEnv Package.
 $ sudo apt update
 $ sudo apt install coinor-libipopt-dev ffmpeg
 $ pip3 install casadi numpy transforms3d scipy matplotlib pyqt5
+$ git clone https://github.com/zehuilu/Learning-from-Sparse-Demonstrations
+$ cd <ROOT_DIRECTORY>
+$ mkdir trajectories data
 ```
 
 
