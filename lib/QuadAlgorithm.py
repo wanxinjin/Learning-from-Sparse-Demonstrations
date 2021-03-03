@@ -44,6 +44,9 @@ class QuadAlgorithm(object):
     beta_1_nadam: float # parameter beta_1 for Nadam, typically 0.9
     beta_2_nadam: float # parameter beta_2 for Nadam, typically 0.999
     epsilon_nadam: float # parameter epsilon for Nadam, typically 1e-8
+    beta_1_amsgrad: float # parameter beta_1 for AMSGrad, typically 0.9
+    beta_2_amsgrad: float # parameter beta_2 for AMSGrad, typically 0.999
+    epsilon_amsgrad: float # parameter epsilon for AMSGrad, typically 1e-8
 
 
     def __init__(self, config_data, QuadParaInput: QuadPara, n_grid: int):
@@ -102,39 +105,54 @@ class QuadAlgorithm(object):
         self.diff_interface_ori_fn = Function('diff_interface', [self.oc.state], [jacobian(self.oc.state[6:10], self.oc.state)])
 
         # initialize some variables for optimization methods, self.oc.n_auxvar is the length of optimization parameter
-        # initialization for Nesterov
-        self.velocity_Nesterov = np.array([0] * self.oc.n_auxvar)
-        # initialization for Adam
-        self.momentum_vector_adam = np.array([0] * self.oc.n_auxvar)
-        self.velocity_vector_adam = np.array([0] * self.oc.n_auxvar)
-        self.momentum_vector_hat_adam = np.array([0] * self.oc.n_auxvar)
-        self.velocity_vector_hat_adam = np.array([0] * self.oc.n_auxvar)
-        # initialization for Nadam
-        self.momentum_vector_nadam = np.array([0] * self.oc.n_auxvar)
-        self.velocity_vector_nadam = np.array([0] * self.oc.n_auxvar)
-        self.momentum_vector_hat_nadam = np.array([0] * self.oc.n_auxvar)
-        self.velocity_vector_hat_nadam = np.array([0] * self.oc.n_auxvar)
+        if (self.optimization_method_str == "Vanilla"):
+            pass
+        elif (self.optimization_method_str == "Nesterov"):
+            # initialization for Nesterov
+            self.velocity_Nesterov = np.array([0] * self.oc.n_auxvar)
+        elif (self.optimization_method_str == "Adam"):
+            # initialization for Adam
+            self.momentum_vector_adam = np.array([0] * self.oc.n_auxvar)
+            self.velocity_vector_adam = np.array([0] * self.oc.n_auxvar)
+            self.momentum_vector_hat_adam = np.array([0] * self.oc.n_auxvar)
+            self.velocity_vector_hat_adam = np.array([0] * self.oc.n_auxvar)
+        elif (self.optimization_method_str == "Nadam"):
+            # initialization for Nadam
+            self.momentum_vector_nadam = np.array([0] * self.oc.n_auxvar)
+            self.velocity_vector_nadam = np.array([0] * self.oc.n_auxvar)
+            self.momentum_vector_hat_nadam = np.array([0] * self.oc.n_auxvar)
+            self.velocity_vector_hat_nadam = np.array([0] * self.oc.n_auxvar)
+        elif (self.optimization_method_str == "AMSGrad"):
+            # initialization for AMSGrad
+            self.momentum_vector_amsgrad = np.array([0] * self.oc.n_auxvar)
+            self.velocity_vector_amsgrad = np.array([0] * self.oc.n_auxvar)
+            self.velocity_vector_hat_amsgrad = np.array([0] * self.oc.n_auxvar)
+        else:
+            raise Exception("Wrong optimization method type!")
 
 
     def load_optimization_function(self, para_input: dict):
         """
-        Load the optimization function. Now support Vanilla gradient descent, Nesterov Momentum, Adam, and Nadam.
+        Load the optimization function. Now support Vanilla gradient descent, Nesterov Momentum, Adam, Nadam, and AMSGrad.
 
         Input:
             para_input: a dictionary which includes the parameters.
         
         Example:
             # This is for Vanilla gradient descent
-            para_input = {"learning_rate": 0.01, "iter_num": 1000, "method": "Vanilla"}
+            para_dict = {"learning_rate": 0.01, "iter_num": 1000, "method": "Vanilla"}
             
             # This is for Nesterov Momentum
-            para_input = {"learning_rate": 0.01, "iter_num": 1000, "method": "Nesterov", "mu": 0.9, "true_loss_print_flag": True}
+            para_dict = {"learning_rate": 0.01, "iter_num": 1000, "method": "Nesterov", "mu": 0.9, "true_loss_print_flag": True}
 
             # This is for Adam
-            para_optimization_dict = {"learning_rate": 0.01, "iter_num": 100, "method": "Adam", "beta_1": 0.9, "beta_2": 0.999, "epsilon": 1e-8}
+            para_dict = {"learning_rate": 0.01, "iter_num": 100, "method": "Adam", "beta_1": 0.9, "beta_2": 0.999, "epsilon": 1e-8}
             
             # This is for Nadam
-            para_optimization_dict = {"learning_rate": 0.01, "iter_num": 100, "method": "Nadam", "beta_1": 0.9, "beta_2": 0.999, "epsilon": 1e-8}
+            para_dict = {"learning_rate": 0.01, "iter_num": 100, "method": "Nadam", "beta_1": 0.9, "beta_2": 0.999, "epsilon": 1e-8}
+        
+            # This is for AMSGrad
+            para_dict = {"learning_rate": 0.01, "iter_num": 100, "method": "AMSGrad", "beta_1": 0.9, "beta_2": 0.999, "epsilon": 1e-8}
         """
 
         # learning rate
@@ -163,6 +181,12 @@ class QuadAlgorithm(object):
             self.beta_2_nadam = para_input["beta_2"]
             self.epsilon_nadam = para_input["epsilon"]
             self.optimization_function = lambda self, theta, idx: self.Nadam(theta, idx)
+
+        elif (para_input["method"] == "AMSGrad"):
+            self.beta_1_amsgrad = para_input["beta_1"]
+            self.beta_2_amsgrad = para_input["beta_2"]
+            self.epsilon_amsgrad = para_input["epsilon"]
+            self.optimization_function = lambda self, theta, idx: self.AMSGrad(theta, idx)
 
         else:
             raise Exception("Wrong optimization method type!")
@@ -508,21 +532,50 @@ class QuadAlgorithm(object):
 
         # iter_idx_now starts from 0, but for Nadam, idx stars from 1
         idx = iter_idx_now + 1
+        # solve the loss and gradient
+        time_grid, opt_sol = self.oc.cocSolver(self.ini_state, self.time_horizon, current_parameter)
+        auxsys_sol = self.oc.auxSysSolver(time_grid, opt_sol, current_parameter)
+        loss, diff_loss = self.getloss_pos_corrections(self.time_list_sparse, self.waypoints, opt_sol, auxsys_sol)
+        # update velocity and momentum vectors
+        self.momentum_vector_nadam = self.beta_1_nadam * self.momentum_vector_nadam + (1-self.beta_1_nadam) * np.array(diff_loss)
+        self.velocity_vector_nadam = self.beta_2_nadam * self.velocity_vector_nadam + (1-self.beta_2_nadam) * np.power(diff_loss, 2)
+        self.momentum_vector_hat_nadam = self.momentum_vector_nadam / (1 - np.power(self.beta_1_nadam, idx))
+        self.velocity_vector_hat_nadam = self.velocity_vector_nadam / (1 - np.power(self.beta_2_nadam, idx))
+        # update the parameter
+        current_parameter = current_parameter - self.learning_rate * \
+            ( self.beta_1_nadam*self.momentum_vector_hat_nadam + ((1-self.beta_1_nadam)/(1-np.power(self.beta_1_nadam, idx))) * np.array(diff_loss) ) \
+            / (np.sqrt(self.velocity_vector_hat_nadam) + self.epsilon_nadam)
+        return loss, diff_loss, current_parameter
+
+
+    def AMSGrad(self, current_parameter, iter_idx_now: int):
+        """
+        AMSGrad method.
+
+        Reference:
+            Reddi, S.J., Kale, S. and Kumar, S., 2019. On the convergence of adam and beyond. arXiv preprint arXiv:1904.09237.
+            https://arxiv.org/pdf/1904.09237.pdf
+
+        Input:
+            current_parameter: a 1D numpy array for current parameter which needs to be optimized
+            iter_idx_now: the current iteration index, starting from 0.
+        """
+
+        # iter_idx_now starts from 0, but for Nadam, idx stars from 1
+        idx = iter_idx_now + 1
 
         time_grid, opt_sol = self.oc.cocSolver(self.ini_state, self.time_horizon, current_parameter)
         auxsys_sol = self.oc.auxSysSolver(time_grid, opt_sol, current_parameter)
         loss, diff_loss = self.getloss_pos_corrections(self.time_list_sparse, self.waypoints, opt_sol, auxsys_sol)
         
         # update velocity and momentum vectors
-        self.momentum_vector_nadam = self.beta_1_nadam * self.momentum_vector_nadam + (1-self.beta_1_nadam) * np.array(diff_loss)
-        self.velocity_vector_nadam = self.beta_2_nadam * self.velocity_vector_nadam + (1-self.beta_2_nadam) * np.power(diff_loss, 2)
-        self.momentum_vector_hat_nadam = self.momentum_vector_nadam / (1 - np.power(self.beta_1_nadam, idx))
-        self.velocity_vector_hat_nadam = self.velocity_vector_nadam / (1 - np.power(self.beta_2_nadam, idx))
+        self.momentum_vector_amsgrad = self.beta_1_amsgrad * self.momentum_vector_amsgrad + (1-self.beta_1_amsgrad) * np.array(diff_loss)
+        self.velocity_vector_amsgrad = self.beta_2_amsgrad * self.velocity_vector_amsgrad + (1-self.beta_2_amsgrad) * np.power(diff_loss, 2)
+        self.velocity_vector_hat_amsgrad = np.maximum(self.velocity_vector_hat_amsgrad, self.velocity_vector_amsgrad)
 
         # update the parameter
-        current_parameter = current_parameter - self.learning_rate * \
-            ( self.beta_1_nadam*self.momentum_vector_hat_nadam + ((1-self.beta_1_nadam)/(1-np.power(self.beta_1_nadam, idx))) * np.array(diff_loss) ) \
-            / (np.sqrt(self.velocity_vector_hat_nadam) + self.epsilon_nadam)
+        current_parameter = current_parameter - self.learning_rate * self.momentum_vector_amsgrad \
+            / (np.sqrt(self.velocity_vector_hat_amsgrad) + self.epsilon_amsgrad)
         return loss, diff_loss, current_parameter
 
 

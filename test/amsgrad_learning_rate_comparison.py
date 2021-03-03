@@ -63,14 +63,14 @@ if __name__ == "__main__":
     Solver = QuadAlgorithm(config_data, QuadParaInput, n_grid)
 
     # load the optimization method for learning iteration
-    para_1 = {"learning_rate": 0.01, "iter_num": 100, "method": "Nesterov", "mu": 0.9, "true_loss_print_flag": True} # This is for Nesterov
-    para_2 = {"learning_rate": 0.02, "iter_num": 100, "method": "Nesterov", "mu": 0.9, "true_loss_print_flag": True}
-    para_3 = {"learning_rate": 0.03, "iter_num": 100, "method": "Nesterov", "mu": 0.9, "true_loss_print_flag": True}
-    para_4 = {"learning_rate": 0.04, "iter_num": 100, "method": "Nesterov", "mu": 0.9, "true_loss_print_flag": True}
+    para_1 = {"learning_rate": 0.01, "iter_num": 100, "method": "AMSGrad", "beta_1": 0.9, "beta_2": 0.999, "epsilon": 1e-8} # This is for AMSGrad
+    para_2 = {"learning_rate": 0.02, "iter_num": 100, "method": "AMSGrad", "beta_1": 0.9, "beta_2": 0.999, "epsilon": 1e-8}
+    para_3 = {"learning_rate": 0.03, "iter_num": 100, "method": "AMSGrad", "beta_1": 0.9, "beta_2": 0.999, "epsilon": 1e-8}
+    para_4 = {"learning_rate": 0.04, "iter_num": 100, "method": "AMSGrad", "beta_1": 0.9, "beta_2": 0.999, "epsilon": 1e-8}
     
     loss_trace_comparison = []
     label_list = []
-
+    
     # 1
     Solver.load_optimization_function(para_1)
     Solver.run(QuadInitialCondition, QuadDesiredStates, SparseInput, ObsList, print_flag=True, save_flag=False)
@@ -92,7 +92,7 @@ if __name__ == "__main__":
     loss_trace_comparison.append(loss_trace_3)
     label_list.append(str(para_3["learning_rate"]))
 
-    #4
+    # 4
     Solver.load_optimization_function(para_4)
     Solver.run(QuadInitialCondition, QuadDesiredStates, SparseInput, ObsList, print_flag=True, save_flag=False)
     loss_trace_4 = copy.deepcopy(Solver.loss_trace)

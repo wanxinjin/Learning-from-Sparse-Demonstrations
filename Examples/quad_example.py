@@ -64,9 +64,10 @@ if __name__ == "__main__":
     para_dict = {"learning_rate": 0.01, "iter_num": 50, "method": "Nesterov", "mu": 0.9, "true_loss_print_flag": True} # This is for Nesterov Momentum
     # para_dict = {"learning_rate": 0.01, "iter_num": 50, "method": "Adam", "beta_1": 0.9, "beta_2": 0.999, "epsilon": 1e-8} # This is for Adam
     # para_dict = {"learning_rate": 0.01, "iter_num": 50, "method": "Nadam", "beta_1": 0.9, "beta_2": 0.999, "epsilon": 1e-8} # This is for Nadam
-    
+    # para_dict = {"learning_rate": 0.01, "iter_num": 100, "method": "AMSGrad", "beta_1": 0.9, "beta_2": 0.999, "epsilon": 1e-8} # This is for AMSGrad
+
     Solver.load_optimization_function(para_dict)
 
     # solve it
-    Solver.run(QuadInitialCondition, QuadDesiredStates, SparseInput, ObsList, print_flag=True, save_flag=True)
+    Solver.run(QuadInitialCondition, QuadDesiredStates, SparseInput, ObsList=[], print_flag=True, save_flag=True)
 

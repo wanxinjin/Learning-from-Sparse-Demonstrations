@@ -63,10 +63,10 @@ if __name__ == "__main__":
     Solver = QuadAlgorithm(config_data, QuadParaInput, n_grid)
 
     # load the optimization method for learning iteration
-    para_1 = {"learning_rate": 0.01, "iter_num": 100, "method": "Nesterov", "mu": 0.9, "true_loss_print_flag": True} # This is for Nesterov
-    para_2 = {"learning_rate": 0.02, "iter_num": 100, "method": "Nesterov", "mu": 0.9, "true_loss_print_flag": True}
-    para_3 = {"learning_rate": 0.03, "iter_num": 100, "method": "Nesterov", "mu": 0.9, "true_loss_print_flag": True}
-    para_4 = {"learning_rate": 0.04, "iter_num": 100, "method": "Nesterov", "mu": 0.9, "true_loss_print_flag": True}
+    para_1 = {"learning_rate": 0.01, "iter_num": 100, "method": "Vanilla"} # This is for Vanilla gradient descent
+    para_2 = {"learning_rate": 0.02, "iter_num": 100, "method": "Vanilla"}
+    para_3 = {"learning_rate": 0.03, "iter_num": 100, "method": "Vanilla"}
+    para_4 = {"learning_rate": 0.04, "iter_num": 100, "method": "Vanilla"}
     
     loss_trace_comparison = []
     label_list = []
