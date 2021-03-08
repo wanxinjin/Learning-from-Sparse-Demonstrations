@@ -66,8 +66,8 @@ if __name__ == "__main__":
     para_vanilla = {"learning_rate": 0.06, "iter_num": 100, "method": "Vanilla"} # This is for Vanilla gradient descent
     para_nesterov = {"learning_rate": 0.01, "iter_num": 100, "method": "Nesterov", "mu": 0.9, "true_loss_print_flag": True} # This is for Nesterov
     para_adam = {"learning_rate": 0.22, "iter_num": 100, "method": "Adam", "beta_1": 0.9, "beta_2": 0.999, "epsilon": 1e-8} # This is for Adam
-    para_nadam = {"learning_rate": 0.16, "iter_num": 100, "method": "Nadam", "beta_1": 0.9, "beta_2": 0.999, "epsilon": 1e-8} # This is for Nadam
-    para_amsgrad = {"learning_rate": 0.02, "iter_num": 100, "method": "AMSGrad", "beta_1": 0.9, "beta_2": 0.999, "epsilon": 1e-8} # This is for AMSGrad
+    para_nadam = {"learning_rate": 0.10, "iter_num": 100, "method": "Nadam", "beta_1": 0.9, "beta_2": 0.999, "epsilon": 1e-8} # This is for Nadam
+    para_amsgrad = {"learning_rate": 0.06, "iter_num": 100, "method": "AMSGrad", "beta_1": 0.9, "beta_2": 0.999, "epsilon": 1e-8} # This is for AMSGrad
     
     loss_trace_comparison = []
     label_list = []
@@ -104,7 +104,7 @@ if __name__ == "__main__":
     Solver.run(QuadInitialCondition, QuadDesiredStates, SparseInput, ObsList, print_flag=True, save_flag=False)
     loss_trace_amsgrad = copy.deepcopy(Solver.loss_trace)
     loss_trace_comparison.append(loss_trace_amsgrad)
-    label_list.append(para_vanilla["method"])
+    label_list.append(para_amsgrad["method"])
 
     # plot the comparison
     Solver.plot_opt_method_comparison(loss_trace_comparison, label_list)
