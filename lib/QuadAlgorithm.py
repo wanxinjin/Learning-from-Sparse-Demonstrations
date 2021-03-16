@@ -6,7 +6,6 @@ sys.path.append(os.getcwd()+'/CPDP')
 sys.path.append(os.getcwd()+'/JinEnv')
 sys.path.append(os.getcwd()+'/lib')
 import copy
-import time
 import math
 import json
 import CPDP
