@@ -17,6 +17,7 @@
 
 '''
 
+#!/usr/bin/env python3
 import os
 import sys
 sys.path.append(os.getcwd()+'/lib')
@@ -787,21 +788,17 @@ class Quadrotor:
         self.cost_auxvar = vcat(parameter)
 
         # goal position in the world frame
-        goal_r_I = np.array([0, 0, 0])
         self.cost_r_I = dot(self.r_I - goal_r_I, self.r_I - goal_r_I)
 
         # goal velocity
-        goal_v_I = np.array([0, 0, 0])
         self.cost_v_I = dot(self.v_I - goal_v_I, self.v_I - goal_v_I)
 
         # final attitude error
-        goal_q = toQuaternion(0, [0, 0, 1])
         goal_R_B_I = self.dir_cosine(goal_q)
         R_B_I = self.dir_cosine(self.q)
         self.cost_q = trace(np.identity(3) - mtimes(transpose(goal_R_B_I), R_B_I))
 
         # auglar velocity cost
-        goal_w_B = np.array([0, 0, 0])
         self.cost_w_B = dot(self.w_B - goal_w_B, self.w_B - goal_w_B)
 
         # the thrust cost

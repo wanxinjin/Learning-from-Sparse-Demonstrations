@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 from casadi import *
 import numpy
 from scipy.integrate import solve_ivp
