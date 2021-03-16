@@ -5,7 +5,6 @@ import time
 sys.path.append(os.getcwd()+'/CPDP')
 sys.path.append(os.getcwd()+'/JinEnv')
 sys.path.append(os.getcwd()+'/lib')
-sys.path.append('/Users/zehui/Downloads/casadi-osx-py39-v3.5.5')
 import json
 import numpy as np
 import transforms3d
