@@ -1,0 +1,6 @@
+*.DS_Store
+/.vscode/*
+JinEnv/__pycache__/*
+CPDP/__pycache__/*
+lib/__pycache__/*
+/.idea/*

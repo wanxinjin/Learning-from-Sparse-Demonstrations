@@ -6,21 +6,42 @@ Wanxin Jin, Todd D. Murphey, Dana Kulić, Neta Ezer, Shaoshuai Mou. Please find 
 * Paper: https://arxiv.org/abs/2008.02159 for technical details.
 * Demos: https://wanxinjin.github.io/posts/lfsd for video demos.
 
+This repo has been tested with:
+* Ubuntu 20.04.2 LTS, Python 3.8.5, CasADi 3.5.5, Numpy 1.20.1, Scipy 1.6.1, coinor-libipopt-dev 3.11.9-2.2build2.
 
 ## Project Structure
 The current version of the project consists of three folders:
 
+
 * **_CPDP_** : a package including an optimal control solver, functionalities for differentiating maximum principle, and functionalities to solve the differential maximum principle.  
 * **_JinEnv_** : an independent package providing various robot environments to simulate on.
 * **_Examples_** : various examples to reproduce the experiments in the paper.
+* **_lib_** : various helper libraries for obtaining human demonstrations via GUI.
+* **_test_** : various test files for testing GUI.
 
 
 ## Dependency Packages
 Please make sure that the following packages have already been installed before 
 use of the PDP package or JinEnv Package.
 
-   * CasADi: version > 3.5.1. Info: https://web.casadi.org/
-   * Numpy: version > 1.18.1. Info: https://numpy.org/
+   * [CasADi](https://web.casadi.org/): version > 3.5.1.
+   * [IPOPT](https://coin-or.github.io/Ipopt/): need this for solving NLP in CasADi, the binary installation is fine.
+   * [Numpy](https://numpy.org/): version > 1.18.1.
+   * [Transforms3d](https://pypi.org/project/transforms3d/)
+   * [Scipy](https://www.scipy.org/)
+   * [matplotlib](https://matplotlib.org/)
+   * [FFmpeg](https://ffmpeg.org/): need this for saving the data visualization.
+   * [PyQt5](https://pypi.org/project/PyQt5/)
+
+```
+$ sudo apt update
+$ sudo apt install coinor-libipopt-dev ffmpeg libxcb-xinerama0
+$ pip3 install casadi numpy transforms3d scipy matplotlib pyqt5
+$ git clone https://github.com/zehuilu/Learning-from-Sparse-Demonstrations
+$ cd <ROOT_DIRECTORY>
+$ mkdir trajectories data
+```
+
 
 ## How to Train Your Robots.
 Below is the procedure of how to apply the codes to train your robot to learn from sparse demonstrations.
@@ -32,6 +53,33 @@ Below is the procedure of how to apply the codes to train your robot to learn fr
 * **Step 5.** Done, check and simulate your robot visually (use animation utilities from JinEnv).
 
 The quickest way to hand on the codes is to check and run the examples under the folder `./Examples/` .
+
+
+There are some parameters for the quadrotor demo, including the 3D space limit and the average speed for estimating the time waypoints.
+
+Run the algorithm with pre-defined waypoints:
+```
+$ cd <ROOT_DIRECTORY>
+$ python3 Examples/quad_example.py
+```
+
+Run the algorithm with human inputs:
+```
+$ cd <ROOT_DIRECTORY>
+$ python3 Examples/quad_example_human_input.py
+```
+
+To obtain human input via matplotlib ginput():
+```
+$ cd <ROOT_DIRECTORY>
+$ python3 test/test_input.py
+```
+
+To obtain human input via a GUI with PyQt5:
+```
+$ cd <ROOT_DIRECTORY>
+$ python3 test/test_gui.py
+```
 
 
 ## Contact Information and Citation

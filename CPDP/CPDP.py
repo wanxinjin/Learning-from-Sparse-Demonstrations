@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 from casadi import *
 import numpy
 from scipy.integrate import solve_ivp
@@ -258,7 +259,7 @@ class COCSys:
         if not all(statement):
             self.diffPMP()
 
-        invHuu=casadi.inv(self.ddHuu)
+        invHuu=casadi.pinv(self.ddHuu)
         GinvHuu=casadi.mtimes(self.dfu,invHuu)
         HxuinvHuu = casadi.mtimes(self.ddHxu, invHuu)
         A = self.dfx - casadi.mtimes(GinvHuu, self.ddHxu.T)
@@ -290,7 +291,7 @@ class COCSys:
             self.raccatiODE()
 
         self.auxsys_state=SX.sym('auxsys_x', self.n_state, self.n_auxvar)
-        invHuu = casadi.inv(self.ddHuu)
+        invHuu = casadi.pinv(self.ddHuu)
         auxsys_control=-mtimes(invHuu, mtimes((self.ddHux+self.dfu.T@self.P), self.auxsys_state) + mtimes(self.dfu.T, self.W) + self.ddHue)
         self.auxsys_controller_fn=Function('auxsys_controller', [self.state, self.control, self.costate, self.auxvar, self.P, self.W, self.auxsys_state], [auxsys_control])
         auxsys_state_dot= mtimes(self.dfx, self.auxsys_state) + mtimes(self.dfu, auxsys_control) + self.dfe
@@ -654,7 +655,7 @@ class COCSys_TimeVarying:
         if not all(statement):
             self.diffPMP()
 
-        invHuu=casadi.inv(self.ddHuu)
+        invHuu=casadi.pinv(self.ddHuu)
         GinvHuu=casadi.mtimes(self.dfu,invHuu)
         HxuinvHuu = casadi.mtimes(self.ddHxu, invHuu)
         A = self.dfx - casadi.mtimes(GinvHuu, self.ddHxu.T)
@@ -695,7 +696,7 @@ class COCSys_TimeVarying:
             self.raccatiODE()
 
         self.auxsys_state=SX.sym('auxsys_x', self.n_state, self.n_auxvar)
-        invHuu = casadi.inv(self.ddHuu)
+        invHuu = casadi.pinv(self.ddHuu)
         auxsys_control=-mtimes(invHuu, mtimes((self.ddHux+self.dfu.T@self.P), self.auxsys_state) + mtimes(self.dfu.T, self.W) + self.ddHue)
         self.auxsys_controller_fn=Function('auxsys_controller', [self.time, self.state, self.control, self.costate, self.auxvar, self.P, self.W, self.auxsys_state], [auxsys_control])
         auxsys_state_dot= mtimes(self.dfx, self.auxsys_state) + mtimes(self.dfu, auxsys_control) + self.dfe

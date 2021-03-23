@@ -1,8 +1,15 @@
-from CPDP import CPDP
-from JinEnv import JinEnv
+#!/usr/bin/env python3
+import os
+import sys
+import time
+sys.path.append(os.getcwd()+'/CPDP')
+sys.path.append(os.getcwd()+'/JinEnv')
+sys.path.append(os.getcwd()+'/lib')
+import CPDP
+import JinEnv
 from casadi import *
 from scipy.integrate import solve_ivp
-import time
+
 
 # ---------------------------------------load environment---------------------------------------
 env = JinEnv.Rocket()
@@ -67,7 +74,7 @@ T = 3
 true_parameter = [2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
 true_time_grid, true_opt_sol = oc.cocSolver(ini_state, T, true_parameter)
 env.play_animation(rocket_len=2, state_traj=true_opt_sol(np.linspace(0, T, 100))[:, 0:oc.n_state],
-                   control_traj=true_opt_sol(np.linspace(0, T, 100))[:, oc.n_state:oc.n_state + oc.n_control])
+    control_traj=true_opt_sol(np.linspace(0, T, 100))[:, oc.n_state:oc.n_state + oc.n_control])
 
 taus = true_time_grid[[1, 3, 6, 10, 13]]
 waypoints = np.zeros((taus.size, interface_pos_fn.numel_out() + interface_ori_fn.numel_out()))

@@ -1,11 +1,18 @@
-from CPDP import CPDP
-from JinEnv import JinEnv
+#!/usr/bin/env python3
+import os
+import sys
+import time
+sys.path.append(os.getcwd()+'/CPDP')
+sys.path.append(os.getcwd()+'/JinEnv')
+sys.path.append(os.getcwd()+'/lib')
+import CPDP
+import JinEnv
 from casadi import *
 
 
 # ---------------------------------------load environment-------------------------------
 env = JinEnv.RobotArm()
-env.initDyn(l1=1,m1=1,l2=1,m2=1,g=0)
+env.initDyn(l1=1, m1=1, l2=1, m2=1, dg=0)
 env.initCost_Polynomial(wu=.5)
 
 # --------------------------- create optimal control object --------------------------
@@ -53,7 +60,7 @@ waypoints = np.array([[-pi/4, 2*pi/3]])
 
 # --------------------------- the learning process ----------------------------------------
 lr = 1e-1   # learning rate
-initial_parameter=np.array([5., 1, 1, 1, 1]) # initial parameter
+initial_parameter = np.array([5., 1, 1, 1, 1]) # initial parameter
 loss_trace, parameter_trace = [], []
 current_parameter = initial_parameter
 parameter_trace += [current_parameter.tolist()]
