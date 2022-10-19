@@ -12,7 +12,7 @@ from casadi import *
 
 # ---------------------------------------load environment-------------------------------
 env = JinEnv.RobotArm()
-env.initDyn(l1=1, m1=1, l2=1, m2=1, dg=0)
+env.initDyn(l1=1, m1=1, l2=1, m2=1, g=0)
 env.initCost_Polynomial(wu=.5)
 
 # --------------------------- create optimal control object --------------------------
